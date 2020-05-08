@@ -24,6 +24,10 @@ abstract class FirExtensionRegistrar {
         operator fun ((FirSession) -> FirClassGenerationExtension).unaryPlus() {
             classGenerationExtensions += FirClassGenerationExtension.Factory { this.invoke(it) }
         }
+
+        operator fun ((FirSession) -> AbstractFirAdditionalCheckersExtension).unaryPlus() {
+            additionalCheckersExtensions += AbstractFirAdditionalCheckersExtension.Factory { this.invoke(it) }
+        }
     }
 
     protected abstract fun ExtensionRegistrarContext.configurePlugin()
@@ -32,19 +36,22 @@ abstract class FirExtensionRegistrar {
         ExtensionRegistrarContext().configurePlugin()
         return RegisteredExtensions(
             statusTransformerExtensions,
-            classGenerationExtensions
+            classGenerationExtensions,
+            additionalCheckersExtensions,
         )
     }
 
     private val statusTransformerExtensions: MutableList<FirStatusTransformerExtension.Factory> = mutableListOf()
     private val classGenerationExtensions: MutableList<FirClassGenerationExtension.Factory> = mutableListOf()
+    private val additionalCheckersExtensions: MutableList<AbstractFirAdditionalCheckersExtension.Factory> = mutableListOf()
 
     class RegisteredExtensions(
         val statusTransformerExtensions: List<FirStatusTransformerExtension.Factory>,
-        val classGenerationExtensions: List<FirClassGenerationExtension.Factory>
+        val classGenerationExtensions: List<FirClassGenerationExtension.Factory>,
+        val additionalCheckersExtensions: List<AbstractFirAdditionalCheckersExtension.Factory>,
     ) {
         companion object {
-            val EMPTY = RegisteredExtensions(emptyList(), emptyList())
+            val EMPTY = RegisteredExtensions(emptyList(), emptyList(), emptyList())
         }
     }
 }
@@ -52,4 +59,5 @@ abstract class FirExtensionRegistrar {
 fun FirExtensionsService.registerExtensions(extensions: FirExtensionRegistrar.RegisteredExtensions) {
     registerExtensions(FirStatusTransformerExtension::class, extensions.statusTransformerExtensions)
     registerExtensions(FirClassGenerationExtension::class, extensions.classGenerationExtensions)
+    registerExtensions(AbstractFirAdditionalCheckersExtension::class, extensions.additionalCheckersExtensions)
 }
