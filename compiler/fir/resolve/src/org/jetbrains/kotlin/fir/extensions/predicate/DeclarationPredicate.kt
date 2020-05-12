@@ -3,9 +3,12 @@
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
-package org.jetbrains.kotlin.fir.extensions
+package org.jetbrains.kotlin.fir.extensions.predicate
 
 import org.jetbrains.kotlin.fir.declarations.FirAnnotatedDeclaration
+import org.jetbrains.kotlin.fir.extensions.AnnotationFqn
+import org.jetbrains.kotlin.fir.extensions.extensionsService
+import org.jetbrains.kotlin.fir.extensions.fqName
 
 // -------------------------------------------- Predicates --------------------------------------------
 
@@ -17,6 +20,8 @@ sealed class DeclarationPredicate {
 
     abstract val matchesAll: Boolean
 
+    internal abstract fun <R, D> accept(visitor: DeclarationPredicateVisitor<R, D>, data: D): R
+
     object Any : DeclarationPredicate() {
         override fun match(declaration: FirAnnotatedDeclaration, owners: List<FirAnnotatedDeclaration>): Boolean = true
 
@@ -27,6 +32,10 @@ sealed class DeclarationPredicate {
 
         override val matchesAll: Boolean
             get() = true
+
+        override fun <R, D> accept(visitor: DeclarationPredicateVisitor<R, D>, data: D): R {
+            return visitor.visitAny(this, data)
+        }
     }
 
     class Or(val a: DeclarationPredicate, val b: DeclarationPredicate) : DeclarationPredicate() {
@@ -39,6 +48,10 @@ sealed class DeclarationPredicate {
 
         override val matchesAll: Boolean
             get() = a.matchesAll || b.matchesAll
+
+        override fun <R, D> accept(visitor: DeclarationPredicateVisitor<R, D>, data: D): R {
+            return visitor.visitOr(this, data)
+        }
     }
 
     class And(val a: DeclarationPredicate, val b: DeclarationPredicate) : DeclarationPredicate() {
@@ -51,6 +64,10 @@ sealed class DeclarationPredicate {
 
         override val matchesAll: Boolean
             get() = a.matchesAll && b.matchesAll
+
+        override fun <R, D> accept(visitor: DeclarationPredicateVisitor<R, D>, data: D): R {
+            return visitor.visitAnd(this, data)
+        }
     }
 }
 
@@ -76,11 +93,19 @@ class AnnotatedWith(annotations: Set<AnnotationFqn>) : Annotated(annotations) {
     override fun match(declaration: FirAnnotatedDeclaration, owners: List<FirAnnotatedDeclaration>): Boolean {
         return declaration.hasAnnotation()
     }
+
+    override fun <R, D> accept(visitor: DeclarationPredicateVisitor<R, D>, data: D): R {
+        return visitor.visitAnnotatedWith(this, data)
+    }
 }
 
 class UnderAnnotatedWith(annotations: Set<AnnotationFqn>) : Annotated(annotations) {
     override fun match(declaration: FirAnnotatedDeclaration, owners: List<FirAnnotatedDeclaration>): Boolean {
         return owners.any { it.hasAnnotation() }
+    }
+
+    override fun <R, D> accept(visitor: DeclarationPredicateVisitor<R, D>, data: D): R {
+        return visitor.visitUnderAnnotatedWith(this, data)
     }
 }
 
@@ -108,11 +133,19 @@ class AnnotatedWithMeta(metaAnnotations: Set<AnnotationFqn>) : MetaAnnotated(met
     override fun match(declaration: FirAnnotatedDeclaration, owners: List<FirAnnotatedDeclaration>): Boolean {
         return declaration.hasAnnotation()
     }
+
+    override fun <R, D> accept(visitor: DeclarationPredicateVisitor<R, D>, data: D): R {
+        return visitor.visitAnnotatedWithMeta(this, data)
+    }
 }
 
 class UnderMetaAnnotated(metaAnnotations: Set<AnnotationFqn>) : MetaAnnotated(metaAnnotations) {
     override fun match(declaration: FirAnnotatedDeclaration, owners: List<FirAnnotatedDeclaration>): Boolean {
         return owners.any { it.hasAnnotation() }
+    }
+
+    override fun <R, D> accept(visitor: DeclarationPredicateVisitor<R, D>, data: D): R {
+        return visitor.visitUnderMetaAnnotated(this, data)
     }
 }
 

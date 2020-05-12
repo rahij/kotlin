@@ -35,14 +35,14 @@ class FirRegisteredExtension<P : FirExtension>(
     }
 }
 
-class FirExtensionsService(
+class FirOldExtensionsService(
     val session: FirSession
 ) : ComponentArrayOwner<FirExtension, FirRegisteredExtension<*>>(), FirSessionComponent {
     companion object : TypeRegistry<FirExtension, FirRegisteredExtension<*>>() {
-        inline fun <reified P : FirExtension, V : FirRegisteredExtension<P>> registeredExtensions(): ReadOnlyProperty<FirExtensionsService, ExtensionsAccessor<P>> {
+        inline fun <reified P : FirExtension, V : FirRegisteredExtension<P>> registeredExtensions(): ReadOnlyProperty<FirOldExtensionsService, ExtensionsAccessor<P>> {
             val accessor = generateAccessor<V, P>(P::class)
-            return object : ReadOnlyProperty<FirExtensionsService, ExtensionsAccessor<P>> {
-                override fun getValue(thisRef: FirExtensionsService, property: KProperty<*>): ExtensionsAccessor<P> {
+            return object : ReadOnlyProperty<FirOldExtensionsService, ExtensionsAccessor<P>> {
+                override fun getValue(thisRef: FirOldExtensionsService, property: KProperty<*>): ExtensionsAccessor<P> {
                     return ExtensionsAccessor(thisRef.session, accessor.getValue(thisRef, property))
                 }
             }
@@ -170,12 +170,12 @@ class FirExtensionsService(
     }
 }
 
-val FirSession.extensionsService: FirExtensionsService by FirSession.sessionComponentAccessor()
+val FirSession.extensionsService: FirOldExtensionsService by FirSession.sessionComponentAccessor()
 
 fun FirAnnotationCall.fqName(session: FirSession): FqName? {
     val symbol = session.firSymbolProvider.getSymbolByTypeRef<FirRegularClassSymbol>(annotationTypeRef) ?: return null
     return symbol.classId.asSingleFqName()
 }
 
-val FirExtensionsService.hasExtensions: Boolean
+val FirOldExtensionsService.hasExtensions: Boolean
     get() = registeredExtensionsSize > 0
