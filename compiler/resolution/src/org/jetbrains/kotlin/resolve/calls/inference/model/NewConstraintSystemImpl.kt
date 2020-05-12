@@ -152,7 +152,7 @@ class NewConstraintSystemImpl(
     }
 
     override fun runTransaction(runOperations: ConstraintSystemOperation.() -> Boolean): Boolean {
-        checkState(State.BUILDING, State.COMPLETION)
+        checkState(State.BUILDING, State.COMPLETION, State.TRANSACTION)
         val beforeState = state
         val beforeInitialConstraintCount = storage.initialConstraints.size
         val beforeErrorsCount = storage.errors.size
@@ -350,17 +350,17 @@ class NewConstraintSystemImpl(
 
     // PostponedArgumentsAnalyzer.Context
     override fun buildCurrentSubstitutor(): TypeSubstitutorMarker {
-        checkState(State.BUILDING, State.COMPLETION)
+        checkState(State.BUILDING, State.COMPLETION, State.TRANSACTION)
         return buildCurrentSubstitutor(emptyMap())
     }
 
     override fun buildCurrentSubstitutor(additionalBindings: Map<TypeConstructorMarker, StubTypeMarker>): TypeSubstitutorMarker {
-        checkState(State.BUILDING, State.COMPLETION)
+        checkState(State.BUILDING, State.COMPLETION, State.TRANSACTION)
         return storage.buildCurrentSubstitutor(this, additionalBindings)
     }
 
     override fun buildNotFixedVariablesToStubTypesSubstitutor(): TypeSubstitutorMarker {
-        checkState(State.BUILDING, State.COMPLETION)
+        checkState(State.BUILDING, State.COMPLETION, State.TRANSACTION)
         return storage.buildNotFixedVariablesToNonSubtypableTypesSubstitutor(this)
     }
 
