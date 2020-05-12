@@ -25,6 +25,7 @@ abstract class FirExtensionRegistrar {
             classGenerationExtensions += FirClassGenerationExtension.Factory { this.invoke(it) }
         }
 
+        @JvmName("plusAdditionalCheckersExtension")
         operator fun ((FirSession) -> AbstractFirAdditionalCheckersExtension).unaryPlus() {
             additionalCheckersExtensions += AbstractFirAdditionalCheckersExtension.Factory { this.invoke(it) }
         }
