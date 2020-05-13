@@ -16,7 +16,7 @@ import org.jetbrains.kotlin.types.typeUtil.representativeUpperBound
 import java.security.MessageDigest
 import java.util.*
 
-fun getManglingSuffixBasedOnParameterTypes(descriptor: CallableMemberDescriptor): String? {
+fun getManglingSuffixBasedOnKotlinSignature(descriptor: CallableMemberDescriptor): String? {
     if (descriptor !is FunctionDescriptor) return null
     if (descriptor is ConstructorDescriptor) return null
     if (InlineClassDescriptorResolver.isSynthesizedBoxOrUnboxMethod(descriptor)) return null
@@ -30,9 +30,12 @@ fun getManglingSuffixBasedOnParameterTypes(descriptor: CallableMemberDescriptor)
     // If a class member function returns inline class value, mangle its name.
     // NB here function can be a suspend function JVM view with return type replaced with 'Any',
     // should unwrap it and take original return type instead.
-    val returnType = descriptor.unwrapInitialDescriptorForSuspendFunction().returnType!!
-    if (returnType.isInlineClassType() && descriptor.containingDeclaration is ClassDescriptor) {
-        return "-" + md5base64(":" + getSignatureElementForMangling(returnType))
+    if (descriptor.containingDeclaration is ClassDescriptor) {
+        val returnType = descriptor.unwrapInitialDescriptorForSuspendFunction().returnType!!
+        // NB functions returning all inline classes (including our special 'kotlin.Result') should be mangled.
+        if (returnType.isInlineClassType()) {
+            return "-" + md5base64(":" + getSignatureElementForMangling(returnType))
+        }
     }
 
     return null

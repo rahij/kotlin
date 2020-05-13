@@ -657,7 +657,7 @@ class KotlinTypeMapper @JvmOverloads constructor(
         // so that we don't have to repeat the same logic in reflection
         // in case of properties without getter methods.
         if (kind !== OwnerKind.PROPERTY_REFERENCE_SIGNATURE || descriptor.isPropertyWithGetterSignaturePresent()) {
-            val suffix = getManglingSuffixBasedOnParameterTypes(descriptor)
+            val suffix = getManglingSuffixBasedOnKotlinSignature(descriptor)
             if (suffix != null) {
                 newName += suffix
             } else if (kind === OwnerKind.ERASED_INLINE_CLASS) {
