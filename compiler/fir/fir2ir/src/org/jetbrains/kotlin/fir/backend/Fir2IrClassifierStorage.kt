@@ -365,10 +365,7 @@ class Fir2IrClassifierStorage(
         val parentId = classId.outerClassId
         val irParent = declarationStorage.findIrParent(classId.packageFqName, parentId, firClassSymbol)
         val irClass = createIrClass(firClass, irParent)
-
-        if (irParent is IrExternalPackageFragment) {
-            declarationStorage.addDeclarationsToExternalClass(firClass as FirRegularClass, irClass)
-        }
+        declarationStorage.addDeclarationsToExternalClass(firClass as FirRegularClass, irClass)
 
         return symbolTable.referenceClass(irClass.descriptor)
     }
