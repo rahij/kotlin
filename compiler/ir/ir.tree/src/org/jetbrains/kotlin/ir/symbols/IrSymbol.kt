@@ -37,11 +37,13 @@ interface IrSymbol {
     fun <D, R> accept(visitor: IrSymbolVisitor<R, D>, data: D): R
 }
 
-interface IrBindableSymbol<out D : DeclarationDescriptor, B : IrSymbolOwner> : IrSymbol {
+interface IrSymbolWithOwner<B : IrSymbolOwner> : IrSymbol {
     override val owner: B
-    override val descriptor: D
-
     fun bind(owner: B)
+}
+
+interface IrBindableSymbol<out D : DeclarationDescriptor, B : IrSymbolOwner> : IrSymbolWithOwner<B> {
+    override val descriptor: D
 }
 
 interface IrPackageFragmentSymbol : IrSymbol {

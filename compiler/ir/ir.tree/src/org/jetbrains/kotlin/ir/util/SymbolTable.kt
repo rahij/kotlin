@@ -18,7 +18,6 @@
 
 package org.jetbrains.kotlin.ir.util
 
-import org.jetbrains.kotlin.config.LanguageFeature
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.ir.declarations.*
 import org.jetbrains.kotlin.ir.declarations.impl.*
@@ -94,84 +93,12 @@ open class SymbolTable(
     @Suppress("LeakingThis")
     val lazyWrapper = IrLazySymbolTable(this)
 
-    private abstract inner class SymbolTableBase<D : DeclarationDescriptor, B : IrSymbolOwner, S : IrBindableSymbol<D, B>> {
-        val unboundSymbols = linkedSetOf<S>()
+    private abstract class SymbolTableBase<D : DeclarationDescriptor, B : IrSymbolOwner, S : IrBindableSymbol<D, B>> :
+        SymbolStorageSkeleton<D, B, S>() {
 
-        abstract fun get(d: D): S?
-        abstract fun set(d: D, s: S)
-        abstract fun get(sig: IdSignature): S?
-
-        inline fun declare(d: D, createSymbol: () -> S, createOwner: (S) -> B): B {
-            @Suppress("UNCHECKED_CAST")
-            val d0 = d.original as D
-            assert(d0 === d) {
-                "Non-original descriptor in declaration: $d\n\tExpected: $d0"
-            }
-            val existing = get(d0)
-            val symbol = if (existing == null) {
-                val new = createSymbol()
-                set(d0, new)
-                new
-            } else {
-                unboundSymbols.remove(existing)
-                existing
-            }
-            return createOwner(symbol)
-        }
-
-        inline fun declareIfNotExists(d: D, createSymbol: () -> S, createOwner: (S) -> B): B {
-            @Suppress("UNCHECKED_CAST")
-            val d0 = d.original as D
-            assert(d0 === d) {
-                "Non-original descriptor in declaration: $d\n\tExpected: $d0"
-            }
-            val existing = get(d0)
-            val symbol = if (existing == null) {
-                val new = createSymbol()
-                set(d0, new)
-                new
-            } else {
-                if (!existing.isBound) unboundSymbols.remove(existing)
-                existing
-            }
-            return if (symbol.isBound) symbol.owner else createOwner(symbol)
-        }
-
-        inline fun declare(sig: IdSignature, d: D, createSymbol: () -> S, createOwner: (S) -> B): B {
-            @Suppress("UNCHECKED_CAST")
-            val d0 = d.original as D
-            assert(d0 === d) {
-                "Non-original descriptor in declaration: $d\n\tExpected: $d0"
-            }
-            val existing = get(sig)
-            val symbol = if (existing == null) {
-                val new = createSymbol()
-                set(d0, new)
-                new
-            } else {
-                unboundSymbols.remove(existing)
-                existing
-            }
-            return createOwner(symbol)
-        }
-
-        inline fun referenced(d: D, orElse: () -> S): S {
-            @Suppress("UNCHECKED_CAST")
-            val d0 = d.original as D
-            assert(d0 === d) {
-                "Non-original descriptor in declaration: $d\n\tExpected: $d0"
-            }
-            val s = get(d0)
-            if (s == null) {
-                val new = orElse()
-                assert(unboundSymbols.add(new)) {
-                    "Symbol for ${new.descriptor} was already referenced"
-                }
-                set(d0, new)
-                return new
-            }
-            return s
-        }
+        @Suppress("UNCHECKED_CAST")
+        override val D.originalValue: D
+            get() = this.original as D
 
         inline fun referenced(sig: IdSignature, orElse: () -> S): S {
             return get(sig) ?: run {
