@@ -353,11 +353,14 @@ class Fir2IrClassifierStorage(
     fun getIrClassSymbol(firClassSymbol: FirClassSymbol<*>): IrClassSymbol {
         val firClass = firClassSymbol.fir
         getCachedIrClass(firClass)?.let { return symbolTable.referenceClass(it.descriptor) }
-        // TODO: remove all this code and change to unbound symbol creation
         if (firClass is FirAnonymousObject || firClass is FirRegularClass && firClass.visibility == Visibilities.LOCAL) {
+            // It's possible when anonymous object or local class is used as a parent property type
+            // In this case we create it here and set parent later when it's visited
             val irClass = createIrClass(firClass)
             return symbolTable.referenceClass(irClass.descriptor)
         }
+        // TODO: remove all this code and change to unbound symbol creation
+        // This is were external class created...
         val classId = firClassSymbol.classId
         val parentId = classId.outerClassId
         val irParent = declarationStorage.findIrParent(classId.packageFqName, parentId, firClassSymbol)
