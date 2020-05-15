@@ -11,3 +11,9 @@ fun bar(f: Foo) {}
 
 @JvmName("good")
 fun baz(r: Result<Int>) {}
+
+<!INAPPLICABLE_JVM_NAME!>@JvmName("test")<!>
+fun returnsInlineClass() = Foo(1)
+
+<!INAPPLICABLE_JVM_NAME!>@JvmName("test")<!>
+fun returnsKotlinResult(a: Result<Int>): Result<Int> = a

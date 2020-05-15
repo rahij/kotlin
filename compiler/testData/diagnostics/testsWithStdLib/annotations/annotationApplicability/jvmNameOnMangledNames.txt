@@ -2,6 +2,8 @@ package
 
 @kotlin.jvm.JvmName(name = "bad") public fun bar(/*0*/ f: Foo): kotlin.Unit
 @kotlin.jvm.JvmName(name = "good") public fun baz(/*0*/ r: kotlin.Result<kotlin.Int>): kotlin.Unit
+@kotlin.jvm.JvmName(name = "test") public fun returnsInlineClass(): Foo
+@kotlin.jvm.JvmName(name = "test") public fun returnsKotlinResult(/*0*/ a: kotlin.Result<kotlin.Int>): kotlin.Result<kotlin.Int>
 
 public final inline class Foo {
     public constructor Foo(/*0*/ x: kotlin.Int)
