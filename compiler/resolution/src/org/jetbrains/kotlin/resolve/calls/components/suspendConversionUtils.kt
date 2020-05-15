@@ -30,8 +30,8 @@ object SuspendTypeConversions {
         return false
     }
 
-    fun KotlinResolutionCandidate.conversionMightBeNeededBeforeSubtypingCheck(): Boolean = true
-    fun KotlinResolutionCandidate.conversionMightBeNeededAfterSubtypingCheck(): Boolean = false
+    fun conversionMightBeNeededBeforeSubtypingCheck(): Boolean = true
+    fun conversionMightBeNeededAfterSubtypingCheck(): Boolean = false
 }
 
 
@@ -39,8 +39,6 @@ fun KotlinResolutionCandidate.getExpectedTypeWithSuspendConversion(
     argument: KotlinCallArgument,
     candidateParameter: ParameterDescriptor
 ): UnwrappedType? {
-    if (SuspendTypeConversions.conversionDefinitelyNotNeeded(this, argument, candidateParameter)) return null
-
     val parameterType = candidateParameter.type
     val nonSuspendParameterType = createFunctionType(
         callComponents.builtIns,

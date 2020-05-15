@@ -413,7 +413,34 @@ private fun KotlinResolutionCandidate.resolveKotlinArgument(
     candidateParameter: ParameterDescriptor?,
     receiverInfo: ReceiverInfo
 ) {
-    val expectedType = candidateParameter?.let { prepareExpectedType(argument, candidateParameter) }
+    var wasConversionBeforeSubtypingCheck = false
+    var convertedExpectedType: UnwrappedType? = null
+    var samConversionDefinitelyNotNeeded = true
+    if (!wasConversionBeforeSubtypingCheck && candidateParameter != null) {
+        samConversionDefinitelyNotNeeded = SamTypeConversions.conversionDefinitelyNotNeeded(this, candidateParameter)
+        if (!samConversionDefinitelyNotNeeded &&
+            SamTypeConversions.conversionMightBeNeededBeforeSubtypingCheck(argument)
+        ) {
+            convertedExpectedType = getExpectedTypeWithSAMConversion(argument, candidateParameter)
+            wasConversionBeforeSubtypingCheck = true
+        }
+    }
+
+    var suspendConversionDefinitelyNotNeeded = true
+    if (!wasConversionBeforeSubtypingCheck && candidateParameter != null) {
+        suspendConversionDefinitelyNotNeeded = SuspendTypeConversions.conversionDefinitelyNotNeeded(this, argument, candidateParameter)
+        if (!suspendConversionDefinitelyNotNeeded &&
+            SuspendTypeConversions.conversionMightBeNeededBeforeSubtypingCheck()
+        ) {
+            convertedExpectedType = getExpectedTypeWithSuspendConversion(argument, candidateParameter)
+            wasConversionBeforeSubtypingCheck = true
+        }
+    }
+
+    val unsubstitutedExpectedType =
+        convertedExpectedType ?: candidateParameter?.let { argument.getExpectedType(it, callComponents.languageVersionSettings) }
+    val expectedType = unsubstitutedExpectedType?.let { prepareExpectedType(it) }
+
     val convertedArgument = if (expectedType != null && shouldRunConversionForConstants(expectedType)) {
         val convertedConstant = resolutionCallbacks.convertSignedConstantToUnsigned(argument)
         if (convertedConstant != null) {
@@ -423,8 +450,12 @@ private fun KotlinResolutionCandidate.resolveKotlinArgument(
         convertedConstant
     } else null
 
-    addResolvedKtPrimitive(
-        resolveKtPrimitive(
+    if (candidateParameter == null ||
+        convertedExpectedType != null ||
+        (samConversionDefinitelyNotNeeded && suspendConversionDefinitelyNotNeeded) ||
+        csBuilder.hasContradiction
+    ) {
+        val resolvedAtom = resolveKtPrimitive(
             csBuilder,
             argument,
             expectedType,
@@ -432,7 +463,53 @@ private fun KotlinResolutionCandidate.resolveKotlinArgument(
             receiverInfo,
             convertedArgument?.unknownIntegerType?.unwrap()
         )
-    )
+
+        addResolvedKtPrimitive(resolvedAtom)
+    } else {
+        var convertedTypeAfterSubtyping: UnwrappedType? = null
+        csBuilder.runTransaction {
+            val resolvedAtom = resolveKtPrimitive(
+                csBuilder,
+                argument,
+                expectedType,
+                this@resolveKotlinArgument,
+                receiverInfo,
+                convertedArgument?.unknownIntegerType?.unwrap()
+            )
+
+            if (!hasContradiction) return@runTransaction true
+
+            if (SamTypeConversions.conversionMightBeNeededAfterSubtypingCheck(argument)) {
+                convertedTypeAfterSubtyping = getExpectedTypeWithSAMConversion(argument, candidateParameter)
+            }
+
+            if (convertedTypeAfterSubtyping == null && SuspendTypeConversions.conversionMightBeNeededAfterSubtypingCheck()) {
+                convertedTypeAfterSubtyping = getExpectedTypeWithSuspendConversion(argument, candidateParameter)
+            }
+
+            convertedTypeAfterSubtyping = convertedTypeAfterSubtyping?.let { prepareExpectedType(it) }
+
+            if (convertedTypeAfterSubtyping == null) {
+                addResolvedKtPrimitive(resolvedAtom)
+                return@runTransaction true
+            }
+
+            false
+        }
+
+        if (convertedTypeAfterSubtyping != null) {
+            val resolvedAtom = resolveKtPrimitive(
+                csBuilder,
+                argument,
+                convertedTypeAfterSubtyping,
+                this@resolveKotlinArgument,
+                receiverInfo,
+                convertedArgument?.unknownIntegerType?.unwrap()
+            )
+            addResolvedKtPrimitive(resolvedAtom)
+        }
+
+    }
 }
 
 private fun KotlinResolutionCandidate.shouldRunConversionForConstants(expectedType: UnwrappedType): Boolean {
@@ -472,23 +549,6 @@ private fun KotlinResolutionCandidate.checkUnsafeImplicitInvokeAfterSafeCall(arg
     }
 
     return ImplicitInvokeCheckStatus.INVOKE_ON_NOT_NULL_VARIABLE
-}
-
-private fun KotlinResolutionCandidate.prepareExpectedType(
-    argument: KotlinCallArgument,
-    parameter: ParameterDescriptor
-): UnwrappedType {
-    val expectedType =
-        performExpectedTypeConversion(argument, parameter)
-            ?: argument.getExpectedType(parameter, callComponents.languageVersionSettings)
-    return prepareExpectedType(expectedType)
-}
-
-private fun KotlinResolutionCandidate.performExpectedTypeConversion(
-    argument: KotlinCallArgument,
-    parameter: ParameterDescriptor
-): UnwrappedType? {
-    return getExpectedTypeWithSAMConversion(argument, parameter) ?: getExpectedTypeWithSuspendConversion(argument, parameter)
 }
 
 private fun KotlinResolutionCandidate.prepareExpectedType(expectedType: UnwrappedType): UnwrappedType {

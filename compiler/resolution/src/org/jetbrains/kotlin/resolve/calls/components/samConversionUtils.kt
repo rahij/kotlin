@@ -56,15 +56,6 @@ fun KotlinResolutionCandidate.getExpectedTypeWithSAMConversion(
     argument: KotlinCallArgument,
     candidateParameter: ParameterDescriptor
 ): UnwrappedType? {
-    if (SamTypeConversions.conversionDefinitelyNotNeeded(this, candidateParameter)) return null
-
-    val argumentIsFunctional = when (argument) {
-        is SimpleKotlinCallArgument -> argument.receiver.stableType.isFunctionType
-        is LambdaKotlinCallArgument, is CallableReferenceKotlinCallArgument -> true
-        else -> false
-    }
-    if (!argumentIsFunctional) return null
-
     val originalExpectedType = argument.getExpectedType(candidateParameter.original, callComponents.languageVersionSettings)
 
     val convertedTypeByOriginal =
