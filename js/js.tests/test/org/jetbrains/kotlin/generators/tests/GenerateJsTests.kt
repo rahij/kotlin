@@ -13,7 +13,7 @@ import org.jetbrains.kotlin.js.test.semantics.*
 import org.jetbrains.kotlin.js.test.wasm.semantics.AbstractIrWasmBoxWasmTest
 import org.jetbrains.kotlin.test.TargetBackend
 
-fun main(args: Array<String>) {
+fun main() {
     System.setProperty("java.awt.headless", "true")
 
     // TODO: repair these tests
