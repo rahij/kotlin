@@ -12,10 +12,10 @@ class PerformanceStressTest : AbstractPerformanceProjectsTest() {
     companion object {
 
         @JvmStatic
-        var warmedUp: Boolean = false
+        val hwStats: Stats = Stats("helloWorld project")
 
         @JvmStatic
-        val hwStats: Stats = Stats("helloWorld project")
+        val warmUp = WarmUpProject(hwStats)
 
         init {
             // there is no @AfterClass for junit3.8
@@ -26,22 +26,7 @@ class PerformanceStressTest : AbstractPerformanceProjectsTest() {
 
     override fun setUp() {
         super.setUp()
-        // warm up: open simple small project
-        if (!warmedUp) {
-            warmUpProject(hwStats, "src/HelloMain.kt") {
-                openProject {
-                    name("helloWorld")
-
-                    kotlinFile("HelloMain") {
-                        topFunction("main") {
-                            param("args", "Array<String>")
-                            body("""println("Hello World!")""")
-                        }
-                    }
-                }
-            }
-            warmedUp = true
-        }
+        warmUp.warmUp(this)
     }
 
     fun testLotsOfOverloadedMethods() {

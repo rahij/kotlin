@@ -75,17 +75,20 @@ abstract class AbstractPerformanceProjectsTest : UsefulTestCase() {
             val javaSdk = JavaSdk.getInstance()
             jdk18 = javaSdk.createJdk("1.8", homePath)
             val internal = javaSdk.createJdk("IDEA jdk", homePath)
+            val gradle = javaSdk.createJdk(GRADLE_JDK_NAME, homePath)
 
             val jdkTable = getProjectJdkTableSafe()
             jdkTable.addJdk(jdk18, testRootDisposable)
             jdkTable.addJdk(internal, testRootDisposable)
+            jdkTable.addJdk(gradle, testRootDisposable)
+
             KotlinSdkType.setUpIfNeeded()
         }
 
         GradleProcessOutputInterceptor.install(testRootDisposable)
     }
 
-    protected fun warmUpProject(stats: Stats, vararg filesToHighlight: String, openProject: () -> Project) {
+    internal fun warmUpProject(stats: Stats, vararg filesToHighlight: String, openProject: () -> Project) {
         assertTrue(filesToHighlight.isNotEmpty())
 
         val project = openProject()
@@ -123,14 +126,73 @@ abstract class AbstractPerformanceProjectsTest : UsefulTestCase() {
         return if (lastIndexOf >= 0) fileName.substring(lastIndexOf + 1) else fileName
     }
 
-    protected fun perfOpenHelloWorld(stats: Stats, note: String = ""): Project =
-        perfOpenProject(
-            name = "helloKotlin",
-            stats = stats,
-            note = note,
-            path = "idea/testData/perfTest/helloKotlin",
-            openAction = SIMPLE_JAVA_MODULE
-        )
+    protected fun perfOpenProject(
+        stats: Stats,
+        note: String = "",
+        fast: Boolean = false,
+        initializer: ProjectBuilder.() -> Unit,
+    ): Project {
+        val projectBuilder = ProjectBuilder().apply(initializer)
+        val name = projectBuilder.name
+        val openProjectOperation = projectBuilder.openProjectOperation()
+
+        val warmUpIterations = if (fast) 0 else 5
+        val iterations = if (fast) 1 else 5
+
+        var lastProject: Project? = null
+        var counter = 0
+
+        performanceTest<Unit, Project> {
+            name("open project $name${if (note.isNotEmpty()) " $note" else ""}")
+            stats(stats)
+            warmUpIterations(warmUpIterations)
+            iterations(iterations)
+            checkStability(!fast)
+            test {
+                it.value = openProjectOperation.openProject()
+            }
+            tearDown {
+                it.value?.let { project ->
+                    lastProject = project
+                    openProjectOperation.postOpenProject(project)
+
+                    logMessage { "project '$name' successfully opened" }
+
+                    // close all project but last - we're going to return and use it further
+                    if (counter < warmUpIterations + iterations - 1) {
+                        myApplication.setDataProvider(null)
+                        logMessage { "project '$name' is about to be closed" }
+                        closeProject(project)
+                        logMessage { "project '$name' successfully closed" }
+                    }
+                    counter++
+                }
+            }
+        }
+
+        // indexing
+        lastProject?.let { project ->
+            invalidateLibraryCache(project)
+
+            CodeInsightTestFixtureImpl.ensureIndexesUpToDate(project)
+
+            dispatchAllInvocationEvents()
+
+            logMessage { "project $name is ${if (project.isInitialized) "initialized" else "not initialized"}" }
+
+            with(DumbService.getInstance(project)) {
+                queueTask(UnindexedFilesUpdater(project))
+                completeJustSubmittedTasks()
+            }
+            dispatchAllInvocationEvents()
+
+            Fixture.enableAnnotatorsAndLoadDefinitions(project)
+
+            myApplication.setDataProvider(TestDataProvider(project))
+        }
+
+        return lastProject ?: error("unable to open project $name")
+    }
 
     protected fun perfOpenProject(
         name: String,

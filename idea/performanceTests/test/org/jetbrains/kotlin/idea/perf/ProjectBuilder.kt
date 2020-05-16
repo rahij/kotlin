@@ -209,31 +209,53 @@ class ProjectBuilder {
         //
         return targetDirectory.toAbsolutePath().toFile().absolutePath
     }
+
+    fun openProjectOperation(): OpenProjectOperation {
+        val builder = this
+        val projectPath = generateFiles()
+
+        val jdkTableImpl = JavaAwareProjectJdkTableImpl.getInstanceEx()
+        val homePath = if (jdkTableImpl.internalJdk.homeDirectory!!.name == "jre") {
+            jdkTableImpl.internalJdk.homeDirectory!!.parent.path
+        } else {
+            jdkTableImpl.internalJdk.homePath!!
+        }
+        val javaSdk = JavaSdk.getInstance()
+        val jdk18 = javaSdk.createJdk("1.8", homePath)
+        val openAction = if (buildGradle != null) ProjectOpenAction.GRADLE_PROJECT else ProjectOpenAction.SIMPLE_JAVA_MODULE
+        val openProject = OpenProject(
+            projectPath = projectPath,
+            projectName = name,
+            jdk = jdk18,
+            projectOpenAction = openAction
+        )
+
+        return object : OpenProjectOperation {
+
+            override fun openProject() = ProjectOpenAction.openProject(openProject)
+
+            override fun postOpenProject(project: Project) {
+                openAction.postOpenProject(project = project, openProject = openProject)
+                if (builder.initDefaultProfile) {
+                    openAction.initDefaultProfile(project)
+                }
+            }
+
+        }
+    }
+}
+
+interface OpenProjectOperation {
+    fun openProject(): Project
+
+    fun postOpenProject(project: Project)
 }
 
 fun openProject(initializer: ProjectBuilder.() -> Unit): Project {
     val projectBuilder = ProjectBuilder().apply(initializer)
-    val projectPath = projectBuilder.generateFiles()
+    val openProject = projectBuilder.openProjectOperation()
 
-    val jdkTableImpl = JavaAwareProjectJdkTableImpl.getInstanceEx()
-    val homePath = if (jdkTableImpl.internalJdk.homeDirectory!!.name == "jre") {
-        jdkTableImpl.internalJdk.homeDirectory!!.parent.path
-    } else {
-        jdkTableImpl.internalJdk.homePath!!
+    return openProject.openProject().also {
+        openProject.postOpenProject(it)
     }
-    val javaSdk = JavaSdk.getInstance()
-    val jdk18 = javaSdk.createJdk("1.8", homePath)
-    val openAction = if (projectBuilder.buildGradle != null) ProjectOpenAction.GRADLE_PROJECT else ProjectOpenAction.SIMPLE_JAVA_MODULE
-    val openProject = OpenProject(
-        projectPath = projectPath,
-        projectName = projectBuilder.name,
-        jdk = jdk18,
-        projectOpenAction = openAction
-    )
-    val project = ProjectOpenAction.openProject(openProject)
-    openAction.postOpenProject(project = project, openProject = openProject)
-    if (projectBuilder.initDefaultProfile) {
-        openAction.initDefaultProfile(project)
-    }
-    return project
 }

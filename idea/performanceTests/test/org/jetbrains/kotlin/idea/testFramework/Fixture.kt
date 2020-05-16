@@ -16,6 +16,7 @@ import com.intellij.lang.LanguageAnnotators
 import com.intellij.lang.StdLanguages
 import com.intellij.lang.injection.InjectedLanguageManager
 import com.intellij.lang.java.JavaLanguage
+import com.intellij.lang.xml.XMLLanguage
 import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.editor.Editor
@@ -43,7 +44,6 @@ import junit.framework.TestCase.*
 import org.jetbrains.kotlin.idea.KotlinLanguage
 import org.jetbrains.kotlin.idea.core.script.ScriptConfigurationManager
 import org.jetbrains.kotlin.idea.core.script.ScriptDefinitionsManager
-import org.jetbrains.kotlin.idea.core.script.settings.KotlinScriptingSettings
 import org.jetbrains.kotlin.idea.core.util.toPsiFile
 import org.jetbrains.kotlin.parsing.KotlinParserDefinition
 import java.io.Closeable
@@ -128,7 +128,7 @@ class Fixture(val project: Project, val editor: Editor, val psiFile: PsiFile, va
             InjectedLanguageManager.getInstance(project) // zillion of Dom Sem classes
             with(LanguageAnnotators.INSTANCE) {
                 allForLanguage(JavaLanguage.INSTANCE) // pile of annotator classes loads
-                allForLanguage(StdLanguages.XML)
+                allForLanguage(XMLLanguage.INSTANCE)
                 allForLanguage(KotlinLanguage.INSTANCE)
             }
             DaemonAnalyzerTestCase.assertTrue(
@@ -147,7 +147,7 @@ class Fixture(val project: Project, val editor: Editor, val psiFile: PsiFile, va
             dispatchAllInvocationEvents()
 
             assertTrue(scriptDefinitionsManager.isReady())
-            assertFalse(KotlinScriptingSettings.getInstance(project).isAutoReloadEnabled)
+            //assertFalse(KotlinScriptingSettings.getInstance(project).isAutoReloadEnabled)
         }
 
 
@@ -177,10 +177,10 @@ class Fixture(val project: Project, val editor: Editor, val psiFile: PsiFile, va
             val projectBaseName = baseName(project.name)
 
             val virtualFiles = FilenameIndex.getVirtualFilesByName(
-                    project,
-                    baseFileName, true,
-                    GlobalSearchScope.projectScope(project)
-                )
+                project,
+                baseFileName, true,
+                GlobalSearchScope.projectScope(project)
+            )
                 .filter { it.canonicalPath?.contains("/$projectBaseName/$name") ?: false }.toList()
 
             assertEquals(

@@ -5,6 +5,7 @@
 
 package org.jetbrains.kotlin.idea.perf
 
+import java.io.File
 import java.nio.file.*
 
 fun Path.copyRecursively(targetDirectory: Path) {
@@ -12,3 +13,6 @@ fun Path.copyRecursively(targetDirectory: Path) {
     Files.walk(src)
         .forEach { source -> Files.copy(source, targetDirectory.resolve(src.relativize(source)), StandardCopyOption.REPLACE_EXISTING) }
 }
+
+fun File.allFilesWithExtension(ext: String): Iterable<File> =
+    walk().filter { it.isFile && it.extension.equals(ext, ignoreCase = true) }.toList()
