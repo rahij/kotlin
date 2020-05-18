@@ -477,7 +477,10 @@ private fun KotlinResolutionCandidate.resolveKotlinArgument(
                 convertedArgument?.unknownIntegerType?.unwrap()
             )
 
-            if (!hasContradiction) return@runTransaction true
+            if (!hasContradiction) {
+                addResolvedKtPrimitive(resolvedAtom)
+                return@runTransaction true
+            }
 
             if (SamTypeConversions.conversionMightBeNeededAfterSubtypingCheck(argument)) {
                 convertedTypeAfterSubtyping = getExpectedTypeWithSAMConversion(argument, candidateParameter)
