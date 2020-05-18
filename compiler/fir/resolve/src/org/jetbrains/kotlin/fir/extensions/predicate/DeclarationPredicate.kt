@@ -7,7 +7,7 @@ package org.jetbrains.kotlin.fir.extensions.predicate
 
 import org.jetbrains.kotlin.fir.declarations.FirAnnotatedDeclaration
 import org.jetbrains.kotlin.fir.extensions.AnnotationFqn
-import org.jetbrains.kotlin.fir.extensions.extensionsService
+import org.jetbrains.kotlin.fir.extensions.oldExtensionsService
 import org.jetbrains.kotlin.fir.extensions.fqName
 
 // -------------------------------------------- Predicates --------------------------------------------
@@ -123,7 +123,7 @@ sealed class MetaAnnotated(final override val metaAnnotations: Set<AnnotationFqn
         get() = false
 
     protected fun FirAnnotatedDeclaration.hasAnnotation(): Boolean {
-        val userDefinedAnnotations = session.extensionsService.userDefinedAnnotations
+        val userDefinedAnnotations = session.oldExtensionsService.userDefinedAnnotations
         val registeredAnnotations = metaAnnotations.flatMap { userDefinedAnnotations[it] }
         return annotations.any { it.fqName(session) in registeredAnnotations }
     }

@@ -35,6 +35,7 @@ class FirRegisteredExtension<P : FirExtension>(
     }
 }
 
+@Deprecated("")
 class FirOldExtensionsService(
     val session: FirSession
 ) : ComponentArrayOwner<FirExtension, FirRegisteredExtension<*>>(), FirSessionComponent {
@@ -93,6 +94,7 @@ class FirOldExtensionsService(
         )
     }
 
+    @Deprecated("")
     fun registerUserDefinedAnnotation(metaAnnotation: AnnotationFqn, annotations: Collection<FirRegularClass>) {
         for (annotation in annotations) {
             require(annotation.classKind == ClassKind.ANNOTATION_CLASS)
@@ -119,10 +121,12 @@ class FirOldExtensionsService(
         }
     }
 
+    @Deprecated("")
     val annotations: Set<AnnotationFqn>
         get() = _annotations
     private val _annotations: MutableSet<AnnotationFqn> = mutableSetOf()
 
+    @Deprecated("")
     val metaAnnotations: Set<AnnotationFqn>
         get() = _metaAnnotations
     private val _metaAnnotations: MutableSet<AnnotationFqn> = mutableSetOf()
@@ -130,6 +134,7 @@ class FirOldExtensionsService(
     private val extensionsWithMetaAnnotations: Multimap<AnnotationFqn, FirExtension> = createMultimap()
 
     // MetaAnnotation -> Annotations
+    @Deprecated("")
     val userDefinedAnnotations: Multimap<AnnotationFqn, AnnotationFqn> = createMultimap()
 
     var registeredExtensionsSize: Int = 0
@@ -170,7 +175,8 @@ class FirOldExtensionsService(
     }
 }
 
-val FirSession.extensionsService: FirOldExtensionsService by FirSession.sessionComponentAccessor()
+@Deprecated("")
+val FirSession.oldExtensionsService: FirOldExtensionsService by FirSession.sessionComponentAccessor()
 
 fun FirAnnotationCall.fqName(session: FirSession): FqName? {
     val symbol = session.firSymbolProvider.getSymbolByTypeRef<FirRegularClassSymbol>(annotationTypeRef) ?: return null

@@ -30,7 +30,7 @@ class FirPluginAnnotationsResolveTransformer(private val scopeSession: ScopeSess
     }
 
     override fun transformFile(file: FirFile, data: Nothing?): CompositeTransformResult<FirDeclaration> {
-        val extensionPointService = file.session.extensionsService
+        val extensionPointService = file.session.oldExtensionsService
         if (!extensionPointService.hasExtensions) return file.compose()
         val registeredPluginAnnotations = file.session.registeredPluginAnnotations
         file.replaceResolvePhase(FirResolvePhase.ANNOTATIONS_FOR_PLUGINS)
