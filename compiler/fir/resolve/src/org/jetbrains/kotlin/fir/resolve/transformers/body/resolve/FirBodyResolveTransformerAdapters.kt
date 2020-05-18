@@ -10,12 +10,18 @@ import org.jetbrains.kotlin.fir.declarations.FirFile
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 import org.jetbrains.kotlin.fir.resolve.ResolutionMode
 import org.jetbrains.kotlin.fir.resolve.ScopeSession
-import org.jetbrains.kotlin.fir.resolve.transformers.AdapterForResolvePhase
+import org.jetbrains.kotlin.fir.resolve.transformers.AdapterForResolveProcessor
+import org.jetbrains.kotlin.fir.resolve.transformers.FirTransformerBasedResolveProcessor
 import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
 import org.jetbrains.kotlin.fir.visitors.FirTransformer
 import org.jetbrains.kotlin.fir.visitors.compose
 
-@AdapterForResolvePhase
+@OptIn(AdapterForResolveProcessor::class)
+class FirBodyResolveProcessor(state: State) : FirTransformerBasedResolveProcessor(state) {
+    override val transformer = FirBodyResolveTransformerAdapter(state.scopeSession)
+}
+
+@AdapterForResolveProcessor
 class FirBodyResolveTransformerAdapter(private val scopeSession: ScopeSession) : FirTransformer<Nothing?>() {
 
     override fun <E : FirElement> transformElement(element: E, data: Nothing?): CompositeTransformResult<E> {

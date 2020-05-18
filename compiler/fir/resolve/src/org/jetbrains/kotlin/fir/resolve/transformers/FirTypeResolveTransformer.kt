@@ -20,7 +20,12 @@ import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
 import org.jetbrains.kotlin.fir.visitors.FirTransformer
 import org.jetbrains.kotlin.fir.visitors.compose
 
-@AdapterForResolvePhase
+@OptIn(AdapterForResolveProcessor::class)
+class FirTypeResolveProcessor(state: State) : FirTransformerBasedResolveProcessor(state) {
+    override val transformer = FirTypeResolveTransformerAdapter(state.scopeSession)
+}
+
+@AdapterForResolveProcessor
 class FirTypeResolveTransformerAdapter(
     private val scopeSession: ScopeSession
 ) : FirTransformer<Nothing?>() {

@@ -8,23 +8,16 @@ package org.jetbrains.kotlin.fir.resolve.transformers
 import org.jetbrains.kotlin.fir.declarations.FirFile
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 import org.jetbrains.kotlin.fir.resolve.ScopeSession
-import org.jetbrains.kotlin.fir.visitors.FirTransformer
 
-// TODO: rework, see rr/FIR/semoro-dev FirStagesTransformerFactory
-class FirTotalResolveTransformer {
-
-    val scopeSession = ScopeSession()
-
-    val transformers: List<FirTransformer<Nothing?>> =
+class FirTotalResolveProcessor : FirResolveProcessor(State(ScopeSession())) {
+    val processors: List<FirResolveProcessor> =
         FirResolvePhase.values()
             .drop(1) // to remove RAW_FIR phase
-            .map { it.createTransformerByPhase(scopeSession) }
+            .map { it.createProcessorsByPhase(state) }
 
-    fun processFiles(files: List<FirFile>) {
-        for (transformer in transformers) {
-            for (firFile in files) {
-                firFile.transform<FirFile, Nothing?>(transformer, null)
-            }
+    override fun processFiles(files: List<FirFile>) {
+        for (processor in processors) {
+            processor.processFiles(files)
         }
     }
 }

@@ -14,13 +14,17 @@ import org.jetbrains.kotlin.fir.declarations.*
 import org.jetbrains.kotlin.fir.declarations.impl.FirDeclarationStatusImpl
 import org.jetbrains.kotlin.fir.expressions.FirBlock
 import org.jetbrains.kotlin.fir.expressions.FirStatement
-import org.jetbrains.kotlin.fir.extensions.statusTransformerExtensions
 import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
 import org.jetbrains.kotlin.fir.visitors.FirTransformer
 import org.jetbrains.kotlin.fir.visitors.compose
 import org.jetbrains.kotlin.fir.visitors.transformSingle
 
-@AdapterForResolvePhase
+@OptIn(AdapterForResolveProcessor::class)
+class FirStatusResolveProcessor(state: State) : FirTransformerBasedResolveProcessor(state) {
+    override val transformer = FirStatusResolveTransformerAdapter()
+}
+
+@AdapterForResolveProcessor
 class FirStatusResolveTransformerAdapter : FirTransformer<Nothing?>() {
     override fun <E : FirElement> transformElement(element: E, data: Nothing?): CompositeTransformResult<E> {
         error("Should not be called for ${element::class}, only for files")

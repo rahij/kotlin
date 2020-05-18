@@ -16,7 +16,6 @@ import org.jetbrains.kotlin.fir.declarations.FirDeclaration
 import org.jetbrains.kotlin.fir.declarations.FirFile
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 import org.jetbrains.kotlin.fir.dependenciesWithoutSelf
-import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
 import org.jetbrains.kotlin.fir.extensions.extensionService
 import org.jetbrains.kotlin.fir.extensions.oldExtensionsService
 import org.jetbrains.kotlin.fir.extensions.registerExtensions
@@ -34,7 +33,7 @@ import org.jetbrains.kotlin.fir.resolve.firProvider
 import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.impl.FirCompositeSymbolProvider
 import org.jetbrains.kotlin.fir.resolve.impl.FirProviderImpl
-import org.jetbrains.kotlin.fir.resolve.transformers.FirTotalResolveTransformer
+import org.jetbrains.kotlin.fir.resolve.transformers.FirTotalResolveProcessor
 import org.jetbrains.kotlin.fir.scopes.impl.FirCompositeScope
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.idea.caches.project.IdeaModuleInfo
@@ -84,7 +83,7 @@ abstract class AbstractFirMultiModuleResolveTest : AbstractMultiModuleTest() {
 
     private fun doFirResolveTest(dirPath: String) {
         val firFilesPerSession = mutableMapOf<FirJavaModuleBasedSession, List<FirFile>>()
-        val totalTransformerPerSession = mutableMapOf<FirJavaModuleBasedSession, FirTotalResolveTransformer>()
+        val totalTransformerPerSession = mutableMapOf<FirJavaModuleBasedSession, FirTotalResolveProcessor>()
         val sessions = mutableListOf<FirJavaModuleBasedSession>()
         val provider = FirProjectSessionProvider(project)
         for (module in project.allModules().drop(1)) {
@@ -116,7 +115,7 @@ abstract class AbstractFirMultiModuleResolveTest : AbstractMultiModuleTest() {
                 firFiles += firFile
             }
             firFilesPerSession[session] = firFiles
-            totalTransformerPerSession[session] = FirTotalResolveTransformer()
+            totalTransformerPerSession[session] = FirTotalResolveProcessor()
         }
         println("Raw fir up, files: ${firFilesPerSession.values.flatten().size}")
 

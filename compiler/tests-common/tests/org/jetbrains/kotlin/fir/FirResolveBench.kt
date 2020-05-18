@@ -15,6 +15,8 @@ import org.jetbrains.kotlin.fir.lightTree.LightTree2Fir
 import org.jetbrains.kotlin.fir.references.FirErrorNamedReference
 import org.jetbrains.kotlin.fir.resolve.firProvider
 import org.jetbrains.kotlin.fir.resolve.impl.FirProviderImpl
+import org.jetbrains.kotlin.fir.resolve.transformers.FirResolveProcessor
+import org.jetbrains.kotlin.fir.resolve.transformers.FirTransformerBasedResolveProcessor
 import org.jetbrains.kotlin.fir.types.*
 import org.jetbrains.kotlin.fir.visitors.FirDefaultVisitorVoid
 import org.jetbrains.kotlin.fir.visitors.FirTransformer
@@ -144,21 +146,21 @@ class FirResolveBench(val withProgress: Boolean) {
         }
     }
 
-    private fun runStage(transformer: FirTransformer<Nothing?>, firFileSequence: Sequence<FirFile>) {
+    private fun runStage(processor: FirResolveProcessor, firFileSequence: Sequence<FirFile>) {
         for (firFile in firFileSequence) {
             var fail = false
             val before = vmStateSnapshot()
             val time = measureNanoTime {
                 try {
-                    transformer.transformFile(firFile, null)
+                    processor.transformFile(firFile, null)
                 } catch (e: Throwable) {
                     val ktFile = firFile.psi
                     if (ktFile is KtFile) {
                         println("Fail in file: ${ktFile.virtualFilePath}")
-                        fails += FailureInfo(transformer::class, e, ktFile.virtualFilePath)
+                        fails += FailureInfo(processor::class, e, ktFile.virtualFilePath)
                     } else {
                         println("Fail in file: ${firFile.packageFqName} / ${firFile.name}")
-                        fails += FailureInfo(transformer::class, e, firFile.packageFqName.asString() + "/" + firFile.name)
+                        fails += FailureInfo(processor::class, e, firFile.packageFqName.asString() + "/" + firFile.name)
                     }
                     fail = true
                     //println(ktFile.text)
@@ -168,23 +170,81 @@ class FirResolveBench(val withProgress: Boolean) {
             if (!fail) {
                 val after = vmStateSnapshot()
                 val diff = after - before
-                recordTime(transformer::class, diff, time)
+                recordTime(processor::class, diff, time)
 
             }
             //totalLength += StringBuilder().apply { FirRenderer(this).visitFile(firFile) }.length
         }
     }
 
+    private fun FirResolveProcessor.wrap(): SequenceResolveProcessor = when
+
+    private interface SequenceResolveProcessor {
+        fun processFiles(files: Sequence<FirFile>)
+    }
+
+    private inner class WrappedTransformerBasedProcessor(
+        val processor: FirTransformerBasedResolveProcessor
+    ) : FirTransformerBasedResolveProcessor(processor.state), SequenceResolveProcessor {
+        override val transformer: FirTransformer<Nothing?>
+            get() = processor.transformer
+
+        override fun processFiles(files: List<FirFile>) {
+            throw IllegalStateException("Should not be called")
+        }
+
+        override fun processFiles(files: Sequence<FirFile>) {
+            for (firFile in files) {
+                var fail = false
+                val before = vmStateSnapshot()
+                val time = measureNanoTime {
+                    try {
+                        transformer.transformFile(firFile, null)
+                    } catch (e: Throwable) {
+                        val ktFile = firFile.psi
+                        if (ktFile is KtFile) {
+                            println("Fail in file: ${ktFile.virtualFilePath}")
+                            fails += FailureInfo(processor::class, e, ktFile.virtualFilePath)
+                        } else {
+                            println("Fail in file: ${firFile.packageFqName} / ${firFile.name}")
+                            fails += FailureInfo(processor::class, e, firFile.packageFqName.asString() + "/" + firFile.name)
+                        }
+                        fail = true
+                    }
+                }
+                if (!fail) {
+                    val after = vmStateSnapshot()
+                    val diff = after - before
+                    recordTime(processor::class, diff, time)
+
+                }
+            }
+        }
+    }
+
+    private class WrappedResolveProcessor(
+        val processor: FirResolveProcessor
+    ) : FirResolveProcessor(processor.state), SequenceResolveProcessor {
+        override fun processFiles(files: List<FirFile>) {
+            processor.processFiles(files)
+        }
+
+        override fun processFiles(files: Sequence<FirFile>) {
+            // TODO: collect statistics
+            processFiles(files.toList())
+        }
+    }
+
     fun processFiles(
         firFiles: List<FirFile>,
-        transformers: List<FirTransformer<Nothing?>>
+        processors: List<FirResolveProcessor>
     ) {
         fileCount += firFiles.size
         try {
-            for ((stage, transformer) in transformers.withIndex()) {
+            for ((stage, processor) in processors.withIndex()) {
                 //println("Starting stage #$stage. $transformer")
                 val firFileSequence = if (withProgress) firFiles.progress("   ~ ") else firFiles.asSequence()
-                runStage(transformer, firFileSequence)
+                runStage(processor, firFileSequence)
                 checkFirProvidersConsistency(firFiles)
             }
 
@@ -316,7 +376,7 @@ class FirResolveBench(val withProgress: Boolean) {
 
 fun doFirResolveTestBench(
     firFiles: List<FirFile>,
-    transformers: List<FirTransformer<Nothing?>>,
+    processors: List<FirResolveProcessor>,
     gc: Boolean = true,
     withProgress: Boolean = false,
     silent: Boolean = true
@@ -327,7 +387,7 @@ fun doFirResolveTestBench(
     }
 
     val bench = FirResolveBench(withProgress)
-    bench.processFiles(firFiles, transformers)
+    bench.processFiles(firFiles, processors)
     if (!silent) bench.getTotalStatistics().report(System.out, "")
     bench.throwFailure()
 }

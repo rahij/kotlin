@@ -33,7 +33,7 @@ import org.jetbrains.kotlin.fir.java.FirLibrarySession
 import org.jetbrains.kotlin.fir.java.FirProjectSessionProvider
 import org.jetbrains.kotlin.fir.resolve.firProvider
 import org.jetbrains.kotlin.fir.resolve.impl.FirProviderImpl
-import org.jetbrains.kotlin.fir.resolve.transformers.FirTotalResolveTransformer
+import org.jetbrains.kotlin.fir.resolve.transformers.FirTotalResolveProcessor
 import org.jetbrains.kotlin.idea.KotlinLanguage
 import org.jetbrains.kotlin.name.Name
 import org.jetbrains.kotlin.platform.TargetPlatform
@@ -164,7 +164,7 @@ abstract class AbstractSimpleFileBenchmark {
         val firProvider = session.firProvider as FirProviderImpl
         val builder = RawFirBuilder(session, firProvider.kotlinScopeProvider, stubMode = false)
 
-        val totalTransformer = FirTotalResolveTransformer()
+        val totalTransformer = FirTotalResolveProcessor()
         val firFile = builder.buildFirFile(file).also(firProvider::recordFile)
 
         for (transformer in totalTransformer.transformers) {

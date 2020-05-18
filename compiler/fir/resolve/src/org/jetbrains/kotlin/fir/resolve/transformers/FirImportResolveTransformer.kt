@@ -12,11 +12,16 @@ import org.jetbrains.kotlin.fir.declarations.FirImport
 import org.jetbrains.kotlin.fir.declarations.FirResolvePhase
 import org.jetbrains.kotlin.fir.declarations.builder.buildResolvedImport
 import org.jetbrains.kotlin.fir.resolve.FirSymbolProvider
+import org.jetbrains.kotlin.fir.resolve.transformers.plugin.FirPluginAnnotationsResolveTransformer
 import org.jetbrains.kotlin.fir.symbols.impl.FirClassLikeSymbol
 import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
 import org.jetbrains.kotlin.fir.visitors.compose
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
+
+class FirImportResolveProcessor(state: State) : FirTransformerBasedResolveProcessor(state) {
+    override val transformer = FirImportResolveTransformer()
+}
 
 open class FirImportResolveTransformer protected constructor(phase: FirResolvePhase) : FirAbstractTreeTransformer<Nothing?>(phase) {
     constructor() : this(FirResolvePhase.IMPORTS)

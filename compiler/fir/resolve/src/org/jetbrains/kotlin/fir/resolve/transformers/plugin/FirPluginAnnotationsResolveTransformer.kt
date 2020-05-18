@@ -19,11 +19,17 @@ import org.jetbrains.kotlin.fir.extensions.*
 import org.jetbrains.kotlin.fir.resolve.ScopeSession
 import org.jetbrains.kotlin.fir.resolve.fqName
 import org.jetbrains.kotlin.fir.resolve.transformers.FirImportResolveTransformer
+import org.jetbrains.kotlin.fir.resolve.transformers.FirResolveProcessor
 import org.jetbrains.kotlin.fir.resolve.transformers.FirSpecificTypeResolverTransformer
+import org.jetbrains.kotlin.fir.resolve.transformers.FirTransformerBasedResolveProcessor
 import org.jetbrains.kotlin.fir.visitors.CompositeTransformResult
 import org.jetbrains.kotlin.fir.visitors.FirTransformer
 import org.jetbrains.kotlin.fir.visitors.compose
 import org.jetbrains.kotlin.name.FqName
+
+class FirPluginAnnotationsResolveProcessor(state: State) : FirTransformerBasedResolveProcessor(state) {
+    override val transformer = FirPluginAnnotationsResolveTransformer(state.scopeSession)
+}
 
 class FirPluginAnnotationsResolveTransformer(private val scopeSession: ScopeSession) : FirTransformer<Nothing?>() {
     override fun <E : FirElement> transformElement(element: E, data: Nothing?): CompositeTransformResult<E> {
