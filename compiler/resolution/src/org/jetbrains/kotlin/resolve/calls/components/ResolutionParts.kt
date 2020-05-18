@@ -427,7 +427,7 @@ private fun KotlinResolutionCandidate.resolveKotlinArgument(
     }
 
     var suspendConversionDefinitelyNotNeeded = true
-    if (!wasConversionBeforeSubtypingCheck && candidateParameter != null) {
+    if (convertedExpectedType == null && candidateParameter != null) {
         suspendConversionDefinitelyNotNeeded = SuspendTypeConversions.conversionDefinitelyNotNeeded(this, argument, candidateParameter)
         if (!suspendConversionDefinitelyNotNeeded &&
             SuspendTypeConversions.conversionMightBeNeededBeforeSubtypingCheck()
