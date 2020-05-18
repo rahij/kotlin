@@ -11,53 +11,77 @@ import org.jetbrains.kotlin.utils.DFS
 @RequiresOptIn
 private annotation class StateMachineImplementationDetail
 
+sealed class StateMachine {
+    abstract val success: Boolean
+    abstract fun withAnnotation(annotation: AnnotationFqn): StateMachine?
+    abstract fun nextDeclaration(): StateMachine?
+}
+
 @OptIn(StateMachineImplementationDetail::class)
-class StateMachine(
-    @set:StateMachineImplementationDetail var success: Boolean,
-    @property:StateMachineImplementationDetail val annotations: MutableMap<AnnotationFqn, StateMachine> = mutableMapOf(),
-    @property:StateMachineImplementationDetail var nextDeclaration: StateMachine? = null
-) {
+class ClassicStateMachine(
+    override val success: Boolean,
+    @property:StateMachineImplementationDetail val annotations: MutableMap<AnnotationFqn, ClassicStateMachine> = mutableMapOf(),
+    @property:StateMachineImplementationDetail var nextDeclaration: ClassicStateMachine? = null
+) : StateMachine() {
 
     @OptIn(ExperimentalStdlibApi::class)
-    val nextStates: Set<StateMachine> by lazy(LazyThreadSafetyMode.NONE) {
-        buildSet {
+    val nextStates: Set<ClassicStateMachine>
+        get() = buildSet {
             addAll(annotations.values)
             nextDeclaration?.let { add(it) }
         }
-    }
 
     @StateMachineImplementationDetail
-    fun copy(newStartNode: StateMachine? = null): StateMachine {
-        val map = mutableMapOf<StateMachine, StateMachine>()
-        for (node in allNodes) {
-            map[node] = StateMachine(node.success)
-        }
-        if (newStartNode != null) {
-            map[this] = newStartNode
-        }
-        for (oldNode in allNodes) {
-            val newNode = map.getValue(oldNode)
-            oldNode.annotations.mapValuesTo(newNode.annotations) { map.getValue(it.value) }
-            newNode.nextDeclaration = oldNode.nextDeclaration?.let { map.getValue(it) }
-        }
-
-        return map.getValue(this)
-    }
-
-    @StateMachineImplementationDetail
-    val allNodes: Set<StateMachine> by lazy(LazyThreadSafetyMode.NONE) {
-        DFS.topologicalOrder(
+    val allNodes: Set<ClassicStateMachine>
+        get() = DFS.topologicalOrder(
             listOf(this)
         ) { it.nextStates }.toSet()
+
+    override fun withAnnotation(annotation: AnnotationFqn): ClassicStateMachine? {
+        if (success) return null
+        return annotations[annotation]
     }
 
-    fun withAnnotation(annotation: AnnotationFqn): StateMachine {
-        if (success) return this
-        return annotations[annotation] ?: this
+    override fun nextDeclaration(): ClassicStateMachine? {
+        return nextDeclaration
+    }
+}
+
+class OrStateMachine(val a: StateMachine, val b: StateMachine) : StateMachine() {
+    override val success: Boolean
+        get() = a.success || b.success
+
+    override fun withAnnotation(annotation: AnnotationFqn): OrStateMachine? {
+        val nextA = a.withAnnotation(annotation)
+        val nextB = b.withAnnotation(annotation)
+        if (nextA == null && nextB == null) return null
+        return OrStateMachine(nextA ?: a, nextB ?: b)
     }
 
-    fun nextDeclaration(): StateMachine {
-        return nextDeclaration ?: this
+    override fun nextDeclaration(): OrStateMachine? {
+        val nextA = a.nextDeclaration()
+        val nextB = b.nextDeclaration()
+        if (nextA == null && nextB == null) return null
+        return OrStateMachine(nextA ?: a, nextB ?: b)
+    }
+}
+
+class AndStateMachine(val a: StateMachine, val b: StateMachine) : StateMachine() {
+    override val success: Boolean
+        get() = a.success && b.success
+
+    override fun withAnnotation(annotation: AnnotationFqn): AndStateMachine? {
+        val nextA = a.withAnnotation(annotation)
+        val nextB = b.withAnnotation(annotation)
+        if (nextA == null && nextB == null) return null
+        return AndStateMachine(nextA ?: a, nextB ?: b)
+    }
+
+    override fun nextDeclaration(): AndStateMachine? {
+        val nextA = a.nextDeclaration()
+        val nextB = b.nextDeclaration()
+        if (nextA == null && nextB == null) return null
+        return AndStateMachine(nextA ?: a, nextB ?: b)
     }
 }
 
@@ -84,56 +108,32 @@ internal fun toStateMachine(predicate: SimplifiedDeclarationPredicate): StateMac
     }
 }
 internal fun toStateMachine(predicate: SimplifiedDeclarationPredicate.Any): StateMachine {
-    return StateMachine(success = true)
+    return ClassicStateMachine(success = true)
 }
 
 @OptIn(StateMachineImplementationDetail::class)
 internal fun toStateMachine(predicate: SimplifiedDeclarationPredicate.Or): StateMachine {
-    val leftMachine = toStateMachine(predicate.a)
-    val rightMachine = toStateMachine(predicate.a)
-
-    for (node in leftMachine.allNodes) {
-        rightMachine.copy(node)
-    }
-    return leftMachine
+    return OrStateMachine(toStateMachine(predicate.a), toStateMachine(predicate.b))
 }
 
 @OptIn(StateMachineImplementationDetail::class)
 internal fun toStateMachine(predicate: SimplifiedDeclarationPredicate.And): StateMachine {
-    val leftMachine = toStateMachine(predicate.a)
-    val rightMachine = toStateMachine(predicate.a)
-
-    val unifiedLeft = leftMachine.copy()
-    for (node in unifiedLeft.allNodes) {
-        if (!node.success) continue
-        node.success = false
-        rightMachine.copy(node)
-    }
-
-    val unifiedRight = rightMachine.copy()
-    for (node in unifiedRight.allNodes) {
-        if (!node.success) continue
-        node.success = false
-        leftMachine.copy(node)
-    }
-
-    unifiedRight.copy(unifiedLeft)
-    return unifiedLeft
+    return AndStateMachine(toStateMachine(predicate.a), toStateMachine(predicate.b))
 }
 
 @OptIn(StateMachineImplementationDetail::class)
 internal fun toStateMachine(predicate: SimplifiedDeclarationPredicate.HasAnnotation): StateMachine {
-    val start = StateMachine(success = false)
-    val end = StateMachine(success = true, nextDeclaration = start)
+    val start = ClassicStateMachine(success = false)
+    val end = ClassicStateMachine(success = true, nextDeclaration = start)
     start.annotations[predicate.annotation] = end
     return end
 }
 
 @OptIn(StateMachineImplementationDetail::class)
 internal fun toStateMachine(predicate: SimplifiedDeclarationPredicate.UnderAnnotated): StateMachine {
-    val start = StateMachine(success = false)
-    val middle = StateMachine(success = false)
-    val end = StateMachine(success = true)
+    val start = ClassicStateMachine(success = false)
+    val middle = ClassicStateMachine(success = false)
+    val end = ClassicStateMachine(success = true)
     middle.nextDeclaration = end
     start.annotations[predicate.annotation] = middle
     return start

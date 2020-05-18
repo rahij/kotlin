@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.fir.extensions
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.FirSessionComponent
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
+import org.jetbrains.kotlin.fir.extensions.predicate.DeclarationPredicate
 import org.jetbrains.kotlin.fir.symbols.AbstractFirBasedSymbol
 
 abstract class FirPredicateBasedProvider : FirSessionComponent {
