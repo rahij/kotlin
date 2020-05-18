@@ -35,12 +35,12 @@ class IrValueParameterImpl(
     endOffset: Int,
     origin: IrDeclarationOrigin,
     override val symbol: IrValueParameterSymbol,
-    override val name: Name = symbol.descriptor.name,
-    override val index: Int = symbol.descriptor.safeAs<ValueParameterDescriptor>()?.index ?: -1,
+    override val name: Name,
+    override val index: Int,
     override val type: IrType,
     override val varargElementType: IrType?,
-    override val isCrossinline: Boolean = symbol.descriptor.safeAs<ValueParameterDescriptor>()?.isCrossinline ?: false,
-    override val isNoinline: Boolean = symbol.descriptor.safeAs<ValueParameterDescriptor>()?.isNoinline ?: false
+    override val isCrossinline: Boolean,
+    override val isNoinline: Boolean
 ) :
     IrDeclarationBase<ValueParameterCarrier>(startOffset, endOffset, origin),
     IrValueParameter,
@@ -50,30 +50,19 @@ class IrValueParameterImpl(
         startOffset: Int,
         endOffset: Int,
         origin: IrDeclarationOrigin,
-        symbol: IrValueParameterSymbol,
-        type: IrType,
-        varargElementType: IrType?
-    ) :
-            this(
-                startOffset, endOffset, origin,
-                symbol,
-                symbol.descriptor.name,
-                symbol.descriptor.safeAs<ValueParameterDescriptor>()?.index ?: -1,
-                type,
-                varargElementType,
-                symbol.descriptor.safeAs<ValueParameterDescriptor>()?.isCrossinline ?: false,
-                symbol.descriptor.safeAs<ValueParameterDescriptor>()?.isNoinline ?: false
-            )
-
-    constructor(
-        startOffset: Int,
-        endOffset: Int,
-        origin: IrDeclarationOrigin,
         descriptor: ParameterDescriptor,
         type: IrType,
-        varargElementType: IrType?
-    ) :
-            this(startOffset, endOffset, origin, IrValueParameterSymbolImpl(descriptor), type, varargElementType)
+        varargElementType: IrType?,
+        name: Name = descriptor.name,
+        symbol: IrValueParameterSymbol = IrValueParameterSymbolImpl(descriptor)
+    ) : this(
+        startOffset, endOffset, origin, symbol,
+        name,
+        index = descriptor.safeAs<ValueParameterDescriptor>()?.index ?: -1,
+        type = type, varargElementType = varargElementType,
+        isCrossinline = descriptor.safeAs<ValueParameterDescriptor>()?.isCrossinline ?: false,
+        isNoinline = descriptor.safeAs<ValueParameterDescriptor>()?.isNoinline ?: false
+    )
 
     override val descriptor: ParameterDescriptor = symbol.descriptor
 
