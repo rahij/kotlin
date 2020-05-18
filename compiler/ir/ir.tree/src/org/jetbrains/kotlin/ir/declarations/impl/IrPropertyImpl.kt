@@ -34,15 +34,15 @@ class IrPropertyImpl(
     endOffset: Int,
     origin: IrDeclarationOrigin,
     override val symbol: IrPropertySymbol,
-    override val name: Name = symbol.descriptor.name,
-    override val visibility: Visibility = symbol.descriptor.visibility,
-    override val modality: Modality = symbol.descriptor.modality,
-    override val isVar: Boolean = symbol.descriptor.isVar,
-    override val isConst: Boolean = symbol.descriptor.isConst,
-    override val isLateinit: Boolean = symbol.descriptor.isLateInit,
-    override val isDelegated: Boolean = @Suppress("DEPRECATION") symbol.descriptor.isDelegated,
-    override val isExternal: Boolean = symbol.descriptor.isEffectivelyExternal(),
-    override val isExpect: Boolean = symbol.descriptor.isExpect,
+    override val name: Name,
+    override val visibility: Visibility,
+    override val modality: Modality,
+    override val isVar: Boolean,
+    override val isConst: Boolean,
+    override val isLateinit: Boolean,
+    override val isDelegated: Boolean,
+    override val isExternal: Boolean,
+    override val isExpect: Boolean,
     override val isFakeOverride: Boolean = origin == IrDeclarationOrigin.FAKE_OVERRIDE
 ) : IrDeclarationBase<PropertyCarrier>(startOffset, endOffset, origin),
     IrProperty,
@@ -70,7 +70,8 @@ class IrPropertyImpl(
         isConst = isConst,
         isLateinit = isLateinit,
         isDelegated = isDelegated,
-        isExternal = isExternal
+        isExternal = isExternal,
+        isExpect = descriptor.isExpect
     )
 
     @Suppress("DEPRECATION")
