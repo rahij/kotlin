@@ -523,7 +523,7 @@ class Fir2IrDeclarationStorage(
         }
         classifierStorage.preCacheTypeParameters(constructor)
         val created = constructor.convertWithOffsets { startOffset, endOffset ->
-            symbolTable.declareConstructor(startOffset, endOffset, origin, descriptor) { symbol ->
+            symbolTable.declareConstructor(descriptor) { symbol ->
                 IrConstructorImpl(
                     startOffset, endOffset, origin, symbol,
                     Name.special("<init>"), visibility,
