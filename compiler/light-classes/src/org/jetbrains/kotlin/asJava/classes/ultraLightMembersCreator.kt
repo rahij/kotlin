@@ -117,7 +117,7 @@ internal class UltraLightMembersCreator(
         if (ktFunction.modifierList?.hasSuspendModifier() == true && ktFunction.isPrivate()) {
             return emptyList()
         }
-
+//
         var methodIndex = METHOD_INDEX_BASE
         val basicMethod = asJavaMethod(ktFunction, forceStatic, forcePrivate, methodIndex = methodIndex)
 
@@ -396,7 +396,7 @@ internal class UltraLightMembersCreator(
         }
         return f.hasModifier(INTERNAL_KEYWORD)
     }
-
+//
     fun propertyAccessors(
         declaration: KtCallableDeclaration,
         mutable: Boolean,

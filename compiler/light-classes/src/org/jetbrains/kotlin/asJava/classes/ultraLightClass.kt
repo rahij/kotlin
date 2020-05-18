@@ -262,8 +262,9 @@ open class KtUltraLightClass(classOrObject: KtClassOrObject, internal val suppor
 
     private fun ownMethods(): List<KtLightMethod> {
         val result = mutableListOf<KtLightMethod>()
-
-        for (declaration in this.classOrObject.declarations.filterNot { it.isHiddenByDeprecation(support) }) {
+//
+    //
+        for (declaration in this.classOrObject.declarations) {
             if (declaration.hasModifier(PRIVATE_KEYWORD) && isInterface) continue
             when (declaration) {
                 is KtNamedFunction -> result.addAll(membersBuilder.createMethods(declaration, forceStatic = false))
@@ -273,6 +274,7 @@ open class KtUltraLightClass(classOrObject: KtClassOrObject, internal val suppor
             }
         }
 
+    //
         for (parameter in propertyParameters()) {
             result.addAll(
                 membersBuilder.propertyAccessors(
@@ -289,6 +291,7 @@ open class KtUltraLightClass(classOrObject: KtClassOrObject, internal val suppor
             result.addAll(createConstructors())
         }
 
+    //
         this.classOrObject.companionObjects.firstOrNull()?.let { companion ->
             for (declaration in companion.declarations.filterNot { isHiddenByDeprecation(it) }) {
                 when (declaration) {
