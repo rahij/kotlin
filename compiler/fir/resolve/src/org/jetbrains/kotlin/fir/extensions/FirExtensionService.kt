@@ -5,55 +5,29 @@
 
 package org.jetbrains.kotlin.fir.extensions
 
-import org.jetbrains.kotlin.fir.FirAnnotationContainer
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.FirSessionComponent
-import org.jetbrains.kotlin.fir.declarations.FirDeclaration
-import org.jetbrains.kotlin.fir.declarations.FirDeclarationOrigin
+import org.jetbrains.kotlin.fir.utils.ArrayMapAccessor
 import org.jetbrains.kotlin.fir.utils.ComponentArrayOwner
+import org.jetbrains.kotlin.fir.utils.TypeRegistry
 import kotlin.reflect.KClass
 
-class SomeData
-
-sealed class FirExtensionService : ComponentArrayOwner<FirExtension, SomeData>(), FirSessionComponent {
-    companion object {
-        fun create(session: FirSession): FirExtensionService {
-            TODO()
+class FirExtensionService(val session: FirSession) : ComponentArrayOwner<FirExtension, List<FirExtension>>(), FirSessionComponent {
+    companion object : TypeRegistry<FirExtension, List<FirExtension>>() {
+        inline fun <reified P : FirExtension, V : List<P>> registeredExtensions(): ArrayMapAccessor<FirExtension, List<FirExtension>, V> {
+            return generateAccessor(P::class)
         }
-
-
     }
 
-    abstract fun <P : FirExtension> registerExtensions(extensionClass: KClass<P>, extensionFactories: List<FirExtension.Factory<P>>)
-
-    abstract class ExtensionsAccessor<P : FirExtension> {
-        abstract fun forDeclaration(declaration: FirDeclaration, owners: Collection<FirAnnotationContainer>)
-        abstract fun forGeneratedDeclaration(origin: FirDeclarationOrigin.Plugin)
-        abstract val all: Collection<P>
+    fun <P : FirExtension> registerExtensions(extensionClass: KClass<P>, extensionFactories: List<FirExtension.Factory<P>>) {
+        registerComponent(
+            extensionClass,
+            extensionFactories.map { it.create(session) }
+        )
     }
+
+    override val typeRegistry: TypeRegistry<FirExtension, List<FirExtension>>
+        get() = Companion
 }
 
-/*
- * ExtensionService:
- * 1. declaration, specific extension -> all matching extension instances
- * 2. specific extension -> all extension instances
- */
-
-private abstract class FirExtensionServiceImpl : FirExtensionService() {
-
-}
-
-/*
- *         @A || @B -> annotations.any { it in [@A, @B] } <=> [@A, @B].any { it in annotations }
- *         @A && @B -> [@A, @B].all { it in annotations }
- *
- *   :DNF:
- * (@A && @B) || (@C && @D) -> [@A, @B].all { it in annotations } || [@C, @D].all { it in annotations }
- *   :CNF:
- * (@A || @B) && (@C || @D) -> [@A, @B].any { it in annotations } && [@C, @D].any { it in annotations }
- * (@A || @B) && (@C || @D) -> annotations.any { it in [@A, @B] } && annotations.any { it in [@C, @D] }
- *
- * @A || #B -> [@A].any { it in annotations } || parents.any { [@B].any { it in annotations } }
- *
- *
- */
+val FirSession.extensionService: FirExtensionService by FirSession.sessionComponentAccessor()

@@ -7,7 +7,6 @@ package org.jetbrains.kotlin.fir.extensions
 
 import com.google.common.collect.LinkedHashMultimap
 import com.google.common.collect.Multimap
-import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.FirAnnotationContainer
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.FirSessionComponent
@@ -24,7 +23,7 @@ import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
 
-class FirRegisteredExtension<P : FirExtension>(
+class OldFirRegisteredExtension<P : FirExtension>(
     val extensionsWithAllMode: List<P>,
     val extensionsWithAnnotatedMode: Multimap<AnnotationFqn, P>,
     val extensionsWithAllInAnnotatedMode: Multimap<AnnotationFqn, P>,
@@ -38,9 +37,9 @@ class FirRegisteredExtension<P : FirExtension>(
 @Deprecated("")
 class FirOldExtensionsService(
     val session: FirSession
-) : ComponentArrayOwner<FirExtension, FirRegisteredExtension<*>>(), FirSessionComponent {
-    companion object : TypeRegistry<FirExtension, FirRegisteredExtension<*>>() {
-        inline fun <reified P : FirExtension, V : FirRegisteredExtension<P>> registeredExtensions(): ReadOnlyProperty<FirOldExtensionsService, ExtensionsAccessor<P>> {
+) : ComponentArrayOwner<FirExtension, OldFirRegisteredExtension<*>>(), FirSessionComponent {
+    companion object : TypeRegistry<FirExtension, OldFirRegisteredExtension<*>>() {
+        inline fun <reified P : FirExtension, V : OldFirRegisteredExtension<P>> registeredExtensions(): ReadOnlyProperty<FirOldExtensionsService, ExtensionsAccessor<P>> {
             val accessor = generateAccessor<V, P>(P::class)
             return object : ReadOnlyProperty<FirOldExtensionsService, ExtensionsAccessor<P>> {
                 override fun getValue(thisRef: FirOldExtensionsService, property: KProperty<*>): ExtensionsAccessor<P> {
@@ -52,73 +51,73 @@ class FirOldExtensionsService(
         private fun <K, V> createMultimap(): Multimap<K, V> = LinkedHashMultimap.create()
     }
 
-    override val typeRegistry: TypeRegistry<FirExtension, FirRegisteredExtension<*>>
+    override val typeRegistry: TypeRegistry<FirExtension, OldFirRegisteredExtension<*>>
         get() = Companion
 
     fun <P : FirExtension> registerExtensions(extensionClass: KClass<P>, extensionFactories: List<FirExtension.Factory<P>>) {
-        registeredExtensionsSize += extensionFactories.size
-        val extensions = extensionFactories.map { it.create(session) }
-
-        val extensionsWithAllMode = mutableListOf<P>()
-        val extensionsWithAnnotatedMode = createMultimap<AnnotationFqn, P>()
-        val extensionsWithAllInAnnotatedMode = createMultimap<AnnotationFqn, P>()
-        val extensionsByPlugin = createMultimap<FirPluginKey, P>()
-        for (extension in extensions) {
-            _metaAnnotations += extension.metaAnnotations.keys
-            for (metaAnnotation in extension.metaAnnotations.keys) {
-                extensionsWithMetaAnnotations.put(metaAnnotation, extension)
-            }
-            _annotations += extension.directlyApplicableAnnotations
-            _annotations += extension.childrenApplicableAnnotations
-            when (extension.mode) {
-                FirExtension.Mode.ANNOTATED_ELEMENT -> {
-                    for (annotation in extension.directlyApplicableAnnotations) {
-                        extensionsWithAnnotatedMode.put(annotation, extension)
-                    }
-                    for (annotation in extension.childrenApplicableAnnotations) {
-                        extensionsWithAllInAnnotatedMode.put(annotation, extension)
-                    }
-                }
-                FirExtension.Mode.ALL -> extensionsWithAllMode += extension
-            }
-            extensionsByPlugin.put(extension.key, extension)
-        }
-        registerComponent(
-            extensionClass,
-            FirRegisteredExtension(
-                extensionsWithAllMode,
-                extensionsWithAnnotatedMode,
-                extensionsWithAllInAnnotatedMode,
-                extensionsByPlugin
-            )
-        )
+//        registeredExtensionsSize += extensionFactories.size
+//        val extensions = extensionFactories.map { it.create(session) }
+//
+//        val extensionsWithAllMode = mutableListOf<P>()
+//        val extensionsWithAnnotatedMode = createMultimap<AnnotationFqn, P>()
+//        val extensionsWithAllInAnnotatedMode = createMultimap<AnnotationFqn, P>()
+//        val extensionsByPlugin = createMultimap<FirPluginKey, P>()
+//        for (extension in extensions) {
+//            _metaAnnotations += extension.metaAnnotations.keys
+//            for (metaAnnotation in extension.metaAnnotations.keys) {
+//                extensionsWithMetaAnnotations.put(metaAnnotation, extension)
+//            }
+//            _annotations += extension.directlyApplicableAnnotations
+//            _annotations += extension.childrenApplicableAnnotations
+//            when (extension.mode) {
+//                FirExtension.Mode.ANNOTATED_ELEMENT -> {
+//                    for (annotation in extension.directlyApplicableAnnotations) {
+//                        extensionsWithAnnotatedMode.put(annotation, extension)
+//                    }
+//                    for (annotation in extension.childrenApplicableAnnotations) {
+//                        extensionsWithAllInAnnotatedMode.put(annotation, extension)
+//                    }
+//                }
+//                FirExtension.Mode.ALL -> extensionsWithAllMode += extension
+//            }
+//            extensionsByPlugin.put(extension.key, extension)
+//        }
+//        registerComponent(
+//            extensionClass,
+//            FirRegisteredExtension(
+//                extensionsWithAllMode,
+//                extensionsWithAnnotatedMode,
+//                extensionsWithAllInAnnotatedMode,
+//                extensionsByPlugin
+//            )
+//        )
     }
 
     @Deprecated("")
     fun registerUserDefinedAnnotation(metaAnnotation: AnnotationFqn, annotations: Collection<FirRegularClass>) {
-        for (annotation in annotations) {
-            require(annotation.classKind == ClassKind.ANNOTATION_CLASS)
-            val fqName = annotation.symbol.classId.asSingleFqName()
-            _annotations += fqName
-            userDefinedAnnotations.put(metaAnnotation, fqName)
-            val extensions = extensionsWithMetaAnnotations[metaAnnotation]
-            if (extensions.isEmpty()) return
-            for (extension in extensions) {
-                val registeredExtensions = this[extension.extensionType]
-
-                val metaAnnotationMode = extension.metaAnnotations.getValue(metaAnnotation)
-
-                if (metaAnnotationMode.directed) {
-                    @Suppress("UNCHECKED_CAST")
-                    (registeredExtensions.extensionsWithAnnotatedMode as Multimap<AnnotationFqn, FirExtension>).put(fqName, extension)
-                }
-
-                if (metaAnnotationMode.children) {
-                    @Suppress("UNCHECKED_CAST")
-                    (registeredExtensions.extensionsWithAllInAnnotatedMode as Multimap<AnnotationFqn, FirExtension>).put(fqName, extension)
-                }
-            }
-        }
+//        for (annotation in annotations) {
+//            require(annotation.classKind == ClassKind.ANNOTATION_CLASS)
+//            val fqName = annotation.symbol.classId.asSingleFqName()
+//            _annotations += fqName
+//            userDefinedAnnotations.put(metaAnnotation, fqName)
+//            val extensions = extensionsWithMetaAnnotations[metaAnnotation]
+//            if (extensions.isEmpty()) return
+//            for (extension in extensions) {
+//                val registeredExtensions = this[extension.extensionType]
+//
+//                val metaAnnotationMode = extension.metaAnnotations.getValue(metaAnnotation)
+//
+//                if (metaAnnotationMode.directed) {
+//                    @Suppress("UNCHECKED_CAST")
+//                    (registeredExtensions.extensionsWithAnnotatedMode as Multimap<AnnotationFqn, FirExtension>).put(fqName, extension)
+//                }
+//
+//                if (metaAnnotationMode.children) {
+//                    @Suppress("UNCHECKED_CAST")
+//                    (registeredExtensions.extensionsWithAllInAnnotatedMode as Multimap<AnnotationFqn, FirExtension>).put(fqName, extension)
+//                }
+//            }
+//        }
     }
 
     @Deprecated("")
@@ -142,7 +141,7 @@ class FirOldExtensionsService(
 
     class ExtensionsAccessor<P : FirExtension>(
         private val session: FirSession,
-        private val extensions: FirRegisteredExtension<P>
+        private val extensions: OldFirRegisteredExtension<P>
     ) {
         fun forDeclaration(declaration: FirAnnotationContainer, owners: Collection<FirAnnotationContainer>): Collection<P> {
             if (extensions.isEmpty()) return emptySet()
