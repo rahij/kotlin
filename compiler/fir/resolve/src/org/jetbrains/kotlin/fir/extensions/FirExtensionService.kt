@@ -12,6 +12,9 @@ import org.jetbrains.kotlin.fir.utils.ComponentArrayOwner
 import org.jetbrains.kotlin.fir.utils.TypeRegistry
 import kotlin.reflect.KClass
 
+@RequiresOptIn
+annotation class PluginServicesInitialization
+
 class FirExtensionService(val session: FirSession) : ComponentArrayOwner<FirExtension, List<FirExtension>>(), FirSessionComponent {
     companion object : TypeRegistry<FirExtension, List<FirExtension>>() {
         inline fun <reified P : FirExtension, V : List<P>> registeredExtensions(): ArrayMapAccessor<FirExtension, List<FirExtension>, V> {
@@ -19,15 +22,28 @@ class FirExtensionService(val session: FirSession) : ComponentArrayOwner<FirExte
         }
     }
 
-    fun <P : FirExtension> registerExtensions(extensionClass: KClass<P>, extensionFactories: List<FirExtension.Factory<P>>) {
+    override val typeRegistry: TypeRegistry<FirExtension, List<FirExtension>>
+        get() = Companion
+
+    var registeredExtensionsSize: Int = 0
+        private set
+
+    @PluginServicesInitialization
+    fun registerExtensions(extensionClass: KClass<out FirExtension>, extensionFactories: List<FirExtension.Factory<*>>) {
+        registeredExtensionsSize += extensionFactories.size
         registerComponent(
             extensionClass,
             extensionFactories.map { it.create(session) }
         )
     }
 
-    override val typeRegistry: TypeRegistry<FirExtension, List<FirExtension>>
-        get() = Companion
+    @PluginServicesInitialization
+    fun getAllExtensions(): List<FirExtension> {
+        return arrayMap.flatten()
+    }
 }
 
 val FirSession.extensionService: FirExtensionService by FirSession.sessionComponentAccessor()
+
+val FirExtensionService.hasExtensions: Boolean
+    get() = registeredExtensionsSize > 0

@@ -13,12 +13,9 @@ import org.jetbrains.kotlin.fir.FirSessionComponent
 import org.jetbrains.kotlin.fir.declarations.FirDeclarationOrigin
 import org.jetbrains.kotlin.fir.declarations.FirPluginKey
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
-import org.jetbrains.kotlin.fir.expressions.FirAnnotationCall
-import org.jetbrains.kotlin.fir.resolve.firSymbolProvider
-import org.jetbrains.kotlin.fir.resolve.getSymbolByTypeRef
-import org.jetbrains.kotlin.fir.symbols.impl.FirRegularClassSymbol
-import org.jetbrains.kotlin.fir.utils.*
-import org.jetbrains.kotlin.name.FqName
+import org.jetbrains.kotlin.fir.resolve.fqName
+import org.jetbrains.kotlin.fir.utils.ComponentArrayOwner
+import org.jetbrains.kotlin.fir.utils.TypeRegistry
 import kotlin.properties.ReadOnlyProperty
 import kotlin.reflect.KClass
 import kotlin.reflect.KProperty
@@ -176,11 +173,6 @@ class FirOldExtensionsService(
 
 @Deprecated("")
 val FirSession.oldExtensionsService: FirOldExtensionsService by FirSession.sessionComponentAccessor()
-
-fun FirAnnotationCall.fqName(session: FirSession): FqName? {
-    val symbol = session.firSymbolProvider.getSymbolByTypeRef<FirRegularClassSymbol>(annotationTypeRef) ?: return null
-    return symbol.classId.asSingleFqName()
-}
 
 val FirOldExtensionsService.hasExtensions: Boolean
     get() = registeredExtensionsSize > 0
