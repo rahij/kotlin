@@ -6,15 +6,12 @@
 package org.jetbrains.kotlin.fir.extensions.predicate
 
 import org.jetbrains.kotlin.fir.declarations.FirAnnotatedDeclaration
-import org.jetbrains.kotlin.fir.extensions.AnnotationFqn
-import org.jetbrains.kotlin.fir.extensions.oldExtensionsService
-import org.jetbrains.kotlin.fir.extensions.fqName
+import org.jetbrains.kotlin.fir.extensions.*
+import org.jetbrains.kotlin.fir.resolve.fqName
 
 // -------------------------------------------- Predicates --------------------------------------------
 
 sealed class DeclarationPredicate {
-    abstract fun match(declaration: FirAnnotatedDeclaration, owners: List<FirAnnotatedDeclaration>): Boolean
-
     abstract val annotations: Set<AnnotationFqn>
     abstract val metaAnnotations: Set<AnnotationFqn>
 
@@ -23,8 +20,6 @@ sealed class DeclarationPredicate {
     internal abstract fun <R, D> accept(visitor: DeclarationPredicateVisitor<R, D>, data: D): R
 
     object Any : DeclarationPredicate() {
-        override fun match(declaration: FirAnnotatedDeclaration, owners: List<FirAnnotatedDeclaration>): Boolean = true
-
         override val annotations: Set<AnnotationFqn>
             get() = emptySet()
         override val metaAnnotations: Set<AnnotationFqn>
@@ -39,10 +34,6 @@ sealed class DeclarationPredicate {
     }
 
     class Or(val a: DeclarationPredicate, val b: DeclarationPredicate) : DeclarationPredicate() {
-        override fun match(declaration: FirAnnotatedDeclaration, owners: List<FirAnnotatedDeclaration>): Boolean {
-            return a.match(declaration, owners) || b.match(declaration, owners)
-        }
-
         override val annotations: Set<AnnotationFqn> = a.annotations + b.annotations
         override val metaAnnotations: Set<AnnotationFqn> = a.metaAnnotations + b.metaAnnotations
 
@@ -55,10 +46,6 @@ sealed class DeclarationPredicate {
     }
 
     class And(val a: DeclarationPredicate, val b: DeclarationPredicate) : DeclarationPredicate() {
-        override fun match(declaration: FirAnnotatedDeclaration, owners: List<FirAnnotatedDeclaration>): Boolean {
-            return a.match(declaration, owners) && b.match(declaration, owners)
-        }
-
         override val annotations: Set<AnnotationFqn> = a.annotations + b.annotations
         override val metaAnnotations: Set<AnnotationFqn> = a.metaAnnotations + b.metaAnnotations
 
@@ -90,20 +77,12 @@ sealed class Annotated(final override val annotations: Set<AnnotationFqn>) : Dec
 }
 
 class AnnotatedWith(annotations: Set<AnnotationFqn>) : Annotated(annotations) {
-    override fun match(declaration: FirAnnotatedDeclaration, owners: List<FirAnnotatedDeclaration>): Boolean {
-        return declaration.hasAnnotation()
-    }
-
     override fun <R, D> accept(visitor: DeclarationPredicateVisitor<R, D>, data: D): R {
         return visitor.visitAnnotatedWith(this, data)
     }
 }
 
 class UnderAnnotatedWith(annotations: Set<AnnotationFqn>) : Annotated(annotations) {
-    override fun match(declaration: FirAnnotatedDeclaration, owners: List<FirAnnotatedDeclaration>): Boolean {
-        return owners.any { it.hasAnnotation() }
-    }
-
     override fun <R, D> accept(visitor: DeclarationPredicateVisitor<R, D>, data: D): R {
         return visitor.visitUnderAnnotatedWith(this, data)
     }
@@ -121,29 +100,15 @@ sealed class MetaAnnotated(final override val metaAnnotations: Set<AnnotationFqn
 
     final override val matchesAll: Boolean
         get() = false
-
-    protected fun FirAnnotatedDeclaration.hasAnnotation(): Boolean {
-        val userDefinedAnnotations = session.oldExtensionsService.userDefinedAnnotations
-        val registeredAnnotations = metaAnnotations.flatMap { userDefinedAnnotations[it] }
-        return annotations.any { it.fqName(session) in registeredAnnotations }
-    }
 }
 
 class AnnotatedWithMeta(metaAnnotations: Set<AnnotationFqn>) : MetaAnnotated(metaAnnotations) {
-    override fun match(declaration: FirAnnotatedDeclaration, owners: List<FirAnnotatedDeclaration>): Boolean {
-        return declaration.hasAnnotation()
-    }
-
     override fun <R, D> accept(visitor: DeclarationPredicateVisitor<R, D>, data: D): R {
         return visitor.visitAnnotatedWithMeta(this, data)
     }
 }
 
 class UnderMetaAnnotated(metaAnnotations: Set<AnnotationFqn>) : MetaAnnotated(metaAnnotations) {
-    override fun match(declaration: FirAnnotatedDeclaration, owners: List<FirAnnotatedDeclaration>): Boolean {
-        return owners.any { it.hasAnnotation() }
-    }
-
     override fun <R, D> accept(visitor: DeclarationPredicateVisitor<R, D>, data: D): R {
         return visitor.visitUnderMetaAnnotated(this, data)
     }
