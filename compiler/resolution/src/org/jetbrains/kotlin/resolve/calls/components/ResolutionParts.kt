@@ -452,6 +452,7 @@ private fun KotlinResolutionCandidate.resolveKotlinArgument(
 
     if (candidateParameter == null ||
         convertedExpectedType != null ||
+        wasConversionBeforeSubtypingCheck ||
         (samConversionDefinitelyNotNeeded && suspendConversionDefinitelyNotNeeded) ||
         csBuilder.hasContradiction
     ) {
