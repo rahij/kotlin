@@ -120,9 +120,9 @@ infix fun DeclarationPredicate.or(other: DeclarationPredicate): DeclarationPredi
 infix fun DeclarationPredicate.and(other: DeclarationPredicate): DeclarationPredicate = DeclarationPredicate.And(this, other)
 
 fun under(vararg annotations: AnnotationFqn): DeclarationPredicate = UnderAnnotatedWith(annotations.toSet())
-fun with(vararg annotations: AnnotationFqn): DeclarationPredicate = AnnotatedWith(annotations.toSet())
+fun has(vararg annotations: AnnotationFqn): DeclarationPredicate = AnnotatedWith(annotations.toSet())
 fun metaUnder(vararg metaAnnotations: AnnotationFqn): DeclarationPredicate = AnnotatedWithMeta(metaAnnotations.toSet())
-fun metaWith(vararg metaAnnotations: AnnotationFqn): DeclarationPredicate = UnderMetaAnnotated(metaAnnotations.toSet())
+fun metaHas(vararg metaAnnotations: AnnotationFqn): DeclarationPredicate = UnderMetaAnnotated(metaAnnotations.toSet())
 
-fun withOrUnder(vararg annotations: AnnotationFqn): DeclarationPredicate = with(*annotations) or under(*annotations)
-fun metaWithOrUnder(vararg metaAnnotations: AnnotationFqn): DeclarationPredicate = metaWith(*metaAnnotations) or metaUnder(*metaAnnotations)
+fun withOrUnder(vararg annotations: AnnotationFqn): DeclarationPredicate = has(*annotations) or under(*annotations)
+fun metaWithOrUnder(vararg metaAnnotations: AnnotationFqn): DeclarationPredicate = metaHas(*metaAnnotations) or metaUnder(*metaAnnotations)
