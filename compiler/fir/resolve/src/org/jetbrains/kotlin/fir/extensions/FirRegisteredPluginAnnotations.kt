@@ -11,6 +11,7 @@ import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.FirSessionComponent
 import org.jetbrains.kotlin.fir.declarations.FirRegularClass
+import org.jetbrains.kotlin.fir.extensions.predicate.DeclarationPredicate
 
 abstract class FirRegisteredPluginAnnotations : FirSessionComponent {
     companion object {
@@ -26,6 +27,8 @@ abstract class FirRegisteredPluginAnnotations : FirSessionComponent {
     abstract fun registerAnnotations(annotations: Collection<AnnotationFqn>)
     abstract fun registerMetaAnnotations(metaAnnotations: Collection<AnnotationFqn>)
     abstract fun registerUserDefinedAnnotation(metaAnnotation: AnnotationFqn, annotationClasses: Collection<FirRegularClass>)
+
+    abstract fun getAnnotationsForPredicate(predicate: DeclarationPredicate): Set<AnnotationFqn>
 }
 
 private class FirRegisteredPluginAnnotationsImpl : FirRegisteredPluginAnnotations() {
@@ -34,6 +37,8 @@ private class FirRegisteredPluginAnnotationsImpl : FirRegisteredPluginAnnotation
 
     // MetaAnnotation -> Annotations
     private val userDefinedAnnotations: Multimap<AnnotationFqn, AnnotationFqn> = LinkedHashMultimap.create()
+
+    private val annotationsForPredicateCache: MutableMap<DeclarationPredicate, Set<AnnotationFqn>> = mutableMapOf()
 
     override fun getAnnotationsWithMetaAnnotation(metaAnnotation: AnnotationFqn): Collection<AnnotationFqn> {
         return userDefinedAnnotations[metaAnnotation]
@@ -52,6 +57,18 @@ private class FirRegisteredPluginAnnotationsImpl : FirRegisteredPluginAnnotation
         val annotations = annotationClasses.map { it.symbol.classId.asSingleFqName() }
         registerAnnotations(annotations)
         userDefinedAnnotations.putAll(metaAnnotation, annotations)
+    }
+
+    override fun getAnnotationsForPredicate(predicate: DeclarationPredicate): Set<AnnotationFqn> {
+        return annotationsForPredicateCache.computeIfAbsent(predicate, ::collectAnnotations)
+    }
+
+    private fun collectAnnotations(predicate: DeclarationPredicate): Set<AnnotationFqn> {
+        if (predicate.metaAnnotations.isEmpty()) return predicate.annotations
+        val result = predicate.metaAnnotations.flatMapTo(mutableSetOf()) { getAnnotationsWithMetaAnnotation(it) }
+        if (result.isEmpty()) return predicate.annotations
+        result += predicate.annotations
+        return result
     }
 }
 
